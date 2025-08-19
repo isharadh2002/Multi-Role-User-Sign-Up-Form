@@ -1,5 +1,6 @@
 package com.internship.user_registration.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -24,6 +25,7 @@ public class Role {
     private String description;
 
     @ManyToMany(mappedBy = "roles")
+    @JsonIgnore // Prevents infinite recursion during serialization
     @Builder.Default
     private Set<User> users = new HashSet<>();
 

@@ -24,7 +24,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Role Management", description = "Role management endpoints")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"})
+//@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"})
 public class RoleController {
 
     private final RoleService roleService;

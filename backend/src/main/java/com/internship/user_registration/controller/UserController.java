@@ -30,7 +30,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "User Authentication", description = "User registration and authentication endpoints")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"})
+//@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"})
 public class UserController {
 
     private final UserService userService;

@@ -1,5 +1,6 @@
 package com.internship.user_registration.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -49,6 +50,7 @@ public class User {
     )
 
     @Builder.Default
+    @JsonIgnore // Prevents infinite recursion during serialization
     private Set<Role> roles = new HashSet<>();
 
     @CreationTimestamp
