@@ -36,6 +36,11 @@ public class Role {
     public static final String PROFESSIONAL = "Professional";
     public static final String BUSINESS_OWNER = "Business Owner";
 
+    //Predefined role descriptions
+    public static final String GENERAL_USER_DESCRIPTION = "Standard user with basic access permissions";
+    public static final String PROFESSIONAL_DESCRIPTION = "Professional user with advanced features access";
+    public static final String BUSINESS_OWNER_DESCRIPTION = "Business owner with full business management capabilities";
+
     public Role(String name) {
         this.name = name;
     }
