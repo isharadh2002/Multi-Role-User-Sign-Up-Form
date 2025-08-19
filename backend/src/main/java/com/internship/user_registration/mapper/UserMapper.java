@@ -6,6 +6,7 @@ import com.internship.user_registration.entity.Role;
 import com.internship.user_registration.entity.User;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -85,9 +86,10 @@ public class UserMapper {
 
     /**
      * Extract role names from registration DTO
+     * Converts role names to proper case format
      *
      * @param dto the registration DTO
-     * @return set of role names
+     * @return set of role names in proper case
      */
     public Set<String> extractRoleNames(UserRegistrationDto dto) {
         if (dto == null || dto.getRoles() == null) {
@@ -96,7 +98,30 @@ public class UserMapper {
 
         return dto.getRoles().stream()
                 .map(String::trim)
-                .map(String::toUpperCase)
+                .map(this::convertToProperCase)
                 .collect(Collectors.toSet());
+    }
+
+    /**
+     * Convert role name to proper case
+     * Examples: "GENERAL_USER" -> "General User", "professional" -> "Professional"
+     *
+     * @param roleName the role name to convert
+     * @return role name in proper case
+     */
+    private String convertToProperCase(String roleName) {
+        if (roleName == null || roleName.trim().isEmpty()) {
+            return roleName;
+        }
+
+        // Handle different input formats
+        String normalized = roleName.trim().toLowerCase();
+
+        // Convert underscores to spaces and capitalize each word
+        String withSpaces = normalized.replace("_", " ");
+
+        return Arrays.stream(withSpaces.split("\\s+"))
+                .map(word -> word.substring(0, 1).toUpperCase() + word.substring(1))
+                .collect(Collectors.joining(" "));
     }
 }

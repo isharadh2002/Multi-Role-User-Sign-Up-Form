@@ -27,10 +27,10 @@ public class Role {
     @Builder.Default
     private Set<User> users = new HashSet<>();
 
-    // Predefined role names
-    public static final String GENERAL_USER = "GENERAL_USER";
-    public static final String PROFESSIONAL = "PROFESSIONAL";
-    public static final String BUSINESS_OWNER = "BUSINESS_OWNER";
+    // Predefined role names (using proper case as requested)
+    public static final String GENERAL_USER = "General User";
+    public static final String PROFESSIONAL = "Professional";
+    public static final String BUSINESS_OWNER = "Business Owner";
 
     // Constructor for creating roles with name only
     public Role(String name) {
