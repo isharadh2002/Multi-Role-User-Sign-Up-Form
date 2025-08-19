@@ -136,6 +136,11 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("Password and confirm password do not match");
         }
 
+        // Validate password length
+        if(registrationDto.getPassword().length() < 8) {
+            throw new RuntimeException("Password must be at least 8 characters long");
+        }
+
         // Validate roles
         Set<String> invalidRoles = roleService.validateRoleNames(registrationDto.getRoles());
         if (!invalidRoles.isEmpty()) {
