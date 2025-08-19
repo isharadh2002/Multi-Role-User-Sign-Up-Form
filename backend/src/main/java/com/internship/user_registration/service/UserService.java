@@ -8,73 +8,74 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Service interface for user management operations
- * Following the Service Layer pattern for business logic separation
+ * Service interface for User operations
+ * Follows the Service Layer pattern for business logic abstraction
  */
 public interface UserService {
 
     /**
-     * Register a new user with the provided registration data
+     * Register a new user
      *
      * @param registrationDto the user registration data
-     * @return UserResponseDto containing the created user information
-     * @throws IllegalArgumentException if validation fails or user already exists
+     * @return UserResponseDto containing user information
+     * @throws RuntimeException if email or phone already exists
      */
     UserResponseDto registerUser(UserRegistrationDto registrationDto);
 
     /**
-     * Find user by email address
-     *
-     * @param email the email to search for
-     * @return Optional containing UserResponseDto if found
-     */
-    Optional<UserResponseDto> findUserByEmail(String email);
-
-    /**
      * Find user by ID
      *
-     * @param userId the user ID to search for
+     * @param userId the user ID
      * @return Optional containing UserResponseDto if found
      */
     Optional<UserResponseDto> findUserById(Long userId);
 
     /**
-     * Check if user exists by email
+     * Find user by email
+     *
+     * @param email the email address
+     * @return Optional containing UserResponseDto if found
+     */
+    Optional<UserResponseDto> findUserByEmail(String email);
+
+    /**
+     * Find users by country
+     *
+     * @param country the country code
+     * @return list of users from the specified country
+     */
+    List<UserResponseDto> findUsersByCountry(String country);
+
+    /**
+     * Check if email already exists
      *
      * @param email the email to check
-     * @return true if user exists, false otherwise
+     * @return true if email exists, false otherwise
      */
     boolean existsByEmail(String email);
 
     /**
-     * Check if user exists by phone number
+     * Check if phone number already exists
      *
      * @param phoneNumber the phone number to check
-     * @return true if user exists, false otherwise
+     * @return true if phone number exists, false otherwise
      */
     boolean existsByPhoneNumber(String phoneNumber);
 
     /**
-     * Get all users (for admin purposes - optional enhancement)
+     * Get count of users by role name
      *
-     * @return list of all users
+     * @param roleName the role name
+     * @return count of users with the specified role
      */
-    List<UserResponseDto> getAllUsers();
+    long countUsersByRole(String roleName);
 
     /**
-     * Validate password strength
+     * Validate user registration data
+     * Additional business logic validation beyond bean validation
      *
-     * @param password the password to validate
-     * @return true if password meets requirements
+     * @param registrationDto the registration data
+     * @throws RuntimeException if validation fails
      */
-    boolean isValidPassword(String password);
-
-    /**
-     * Validate that passwords match
-     *
-     * @param password the original password
-     * @param confirmPassword the confirmation password
-     * @return true if passwords match
-     */
-    boolean passwordsMatch(String password, String confirmPassword);
+    void validateUserRegistration(UserRegistrationDto registrationDto);
 }

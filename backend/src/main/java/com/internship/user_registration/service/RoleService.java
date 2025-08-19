@@ -1,5 +1,6 @@
 package com.internship.user_registration.service;
 
+import com.internship.user_registration.dto.RoleResponseDto;
 import com.internship.user_registration.entity.Role;
 
 import java.util.List;
@@ -7,60 +8,68 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Service interface for role management operations
+ * Service interface for Role operations
+ * Follows the Service Layer pattern for business logic abstraction
  */
 public interface RoleService {
 
     /**
-     * Initialize default roles in the system
-     * This method should be called on application startup
+     * Find all available roles
+     *
+     * @return list of all roles as DTOs
      */
-    void initializeDefaultRoles();
+    List<RoleResponseDto> findAllRoles();
+
+    /**
+     * Find role by ID
+     *
+     * @param roleId the role ID
+     * @return Optional containing the role DTO if found
+     */
+    Optional<RoleResponseDto> findRoleById(Long roleId);
 
     /**
      * Find role by name
      *
-     * @param roleName the role name to search for
-     * @return Optional containing the role if found
+     * @param name the role name
+     * @return Optional containing the role DTO if found
      */
-    Optional<Role> findByName(String roleName);
+    Optional<RoleResponseDto> findRoleByName(String name);
 
     /**
-     * Find roles by a set of role names
+     * Find roles by names (for user registration)
      *
-     * @param roleNames set of role names to search for
-     * @return set of found roles
+     * @param roleNames set of role names
+     * @return set of role entities
      */
-    Set<Role> findRolesByNames(Set<String> roleNames);
+    Set<Role> findRoleEntitiesByNames(Set<String> roleNames);
 
     /**
-     * Get all available roles
+     * Check if role exists by name
      *
-     * @return list of all roles
+     * @param name the role name
+     * @return true if role exists, false otherwise
      */
-    List<Role> getAllRoles();
+    boolean existsByName(String name);
 
     /**
-     * Validate that all provided role names exist
+     * Validate role names against available roles
      *
      * @param roleNames set of role names to validate
-     * @return true if all roles exist, false otherwise
+     * @return set of invalid role names (empty if all valid)
      */
-    boolean validateRoles(Set<String> roleNames);
+    Set<String> validateRoleNames(Set<String> roleNames);
 
     /**
-     * Get all valid role names
+     * Get all available role names
      *
-     * @return set of all valid role names
+     * @return set of all role names
      */
-    Set<String> getAllValidRoleNames();
+    Set<String> getAllRoleNames();
 
     /**
-     * Create a new role (for admin purposes - optional)
-     *
-     * @param roleName the name of the role
-     * @param description the description of the role
-     * @return the created role
+     * Initialize default roles if they don't exist
+     * Should be called during application startup
      */
-    Role createRole(String roleName, String description);
+    void initializeDefaultRoles();
 }

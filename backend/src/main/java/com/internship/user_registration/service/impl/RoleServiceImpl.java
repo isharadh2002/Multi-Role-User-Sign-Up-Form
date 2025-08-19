@@ -1,6 +1,8 @@
 package com.internship.user_registration.service.impl;
 
+import com.internship.user_registration.dto.RoleResponseDto;
 import com.internship.user_registration.entity.Role;
+import com.internship.user_registration.mapper.RoleMapper;
 import com.internship.user_registration.repository.RoleRepository;
 import com.internship.user_registration.service.RoleService;
 import lombok.RequiredArgsConstructor;
@@ -11,92 +13,93 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
- * Implementation of RoleService
- * Handles role management and initialization
+ * Service implementation for Role operations
+ * Implements business logic following SOLID principles
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
+@Transactional(readOnly = true)
 public class RoleServiceImpl implements RoleService {
 
     private final RoleRepository roleRepository;
+    private final RoleMapper roleMapper;
 
     @Override
-    public void initializeDefaultRoles() {
-        log.info("Initializing default roles");
-
-        createRoleIfNotExists("General User", "Standard user with basic access");
-        createRoleIfNotExists("Professional", "Professional user with extended features");
-        createRoleIfNotExists("Business Owner", "Business owner with business-specific features");
-
-        log.info("Default roles initialization completed");
+    public List<RoleResponseDto> findAllRoles() {
+        log.debug("Finding all roles");
+        return roleRepository.findAll()
+                .stream()
+                .map(roleMapper::toResponseDto)
+                .collect(Collectors.toList());
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public Optional<Role> findByName(String roleName) {
-        log.debug("Finding role by name: {}", roleName);
-        return roleRepository.findByName(roleName);
+    public Optional<RoleResponseDto> findRoleById(Long roleId) {
+        log.debug("Finding role by ID: {}", roleId);
+        return roleRepository.findById(roleId)
+                .map(roleMapper::toResponseDto);
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public Set<Role> findRolesByNames(Set<String> roleNames) {
-        log.debug("Finding roles by names: {}", roleNames);
-        return roleRepository.findByNameIn(roleNames);
+    public Optional<RoleResponseDto> findRoleByName(String name) {
+        log.debug("Finding role by name: {}", name);
+        return roleRepository.findByName(name.toUpperCase())
+                .map(roleMapper::toResponseDto);
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public List<Role> getAllRoles() {
-        log.debug("Retrieving all roles");
-        return roleRepository.findAll();
+    public Set<Role> findRoleEntitiesByNames(Set<String> roleNames) {
+        log.debug("Finding role entities by names: {}", roleNames);
+        Set<String> upperCaseNames = roleNames.stream()
+                .map(String::toUpperCase)
+                .collect(Collectors.toSet());
+        return roleRepository.findByNameIn(upperCaseNames);
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public boolean validateRoles(Set<String> roleNames) {
-        if (roleNames == null || roleNames.isEmpty()) {
-            return false;
-        }
-
-        Set<String> validRoleNames = getAllValidRoleNames();
-        return validRoleNames.containsAll(roleNames);
+    public boolean existsByName(String name) {
+        log.debug("Checking if role exists by name: {}", name);
+        return roleRepository.existsByName(name.toUpperCase());
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public Set<String> getAllValidRoleNames() {
+    public Set<String> validateRoleNames(Set<String> roleNames) {
+        log.debug("Validating role names: {}", roleNames);
+        Set<String> availableRoles = getAllRoleNames();
+
+        return roleNames.stream()
+                .map(String::toUpperCase)
+                .filter(roleName -> !availableRoles.contains(roleName))
+                .collect(Collectors.toSet());
+    }
+
+    @Override
+    public Set<String> getAllRoleNames() {
+        log.debug("Getting all role names");
         return roleRepository.findAllRoleNames();
     }
 
     @Override
-    public Role createRole(String roleName, String description) {
-        log.info("Creating new role: {} with description: {}", roleName, description);
+    @Transactional
+    public void initializeDefaultRoles() {
+        log.info("Initializing default roles");
 
-        if (roleRepository.existsByName(roleName)) {
-            throw new IllegalArgumentException("Role with name '" + roleName + "' already exists");
-        }
+        createRoleIfNotExists(Role.GENERAL_USER, "Standard user with basic access permissions");
+        createRoleIfNotExists(Role.PROFESSIONAL, "Professional user with advanced features access");
+        createRoleIfNotExists(Role.BUSINESS_OWNER, "Business owner with full business management capabilities");
 
-        Role role = Role.builder()
-                .name(roleName)
-                .description(description)
-                .build();
-
-        Role savedRole = roleRepository.save(role);
-        log.info("Successfully created role with ID: {}", savedRole.getId());
-
-        return savedRole;
+        log.info("Default roles initialization completed");
     }
 
     /**
-     * Helper method to create a role if it doesn't already exist
+     * Helper method to create role if it doesn't exist
      *
-     * @param roleName the name of the role
-     * @param description the description of the role
+     * @param roleName    the role name
+     * @param description the role description
      */
     private void createRoleIfNotExists(String roleName, String description) {
         if (!roleRepository.existsByName(roleName)) {
@@ -104,9 +107,8 @@ public class RoleServiceImpl implements RoleService {
                     .name(roleName)
                     .description(description)
                     .build();
-
             roleRepository.save(role);
-            log.info("Created default role: {}", roleName);
+            log.debug("Created role: {}", roleName);
         } else {
             log.debug("Role already exists: {}", roleName);
         }

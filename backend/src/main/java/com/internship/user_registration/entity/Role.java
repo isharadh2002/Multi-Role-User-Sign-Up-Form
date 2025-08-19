@@ -25,21 +25,21 @@ public class Role {
     private String description;
 
     @ManyToMany(mappedBy = "roles")
-    @JsonIgnore // Prevents infinite recursion during serialization
+    @JsonIgnore  // This prevents circular reference in JSON serialization
+    @ToString.Exclude // Prevents circular reference in toString
+    @EqualsAndHashCode.Exclude // Prevents circular reference in equals/hashCode
     @Builder.Default
     private Set<User> users = new HashSet<>();
 
-    // Predefined role names (using proper case as requested)
+    // Predefined role names
     public static final String GENERAL_USER = "General User";
     public static final String PROFESSIONAL = "Professional";
     public static final String BUSINESS_OWNER = "Business Owner";
 
-    // Constructor for creating roles with name only
     public Role(String name) {
         this.name = name;
     }
 
-    // Constructor for creating roles with name and description
     public Role(String name, String description) {
         this.name = name;
         this.description = description;

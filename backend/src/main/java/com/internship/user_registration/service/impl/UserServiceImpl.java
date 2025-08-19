@@ -17,17 +17,16 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
- * Implementation of UserService following Service Layer pattern
- * Handles all business logic related to user operations
+ * Service implementation for User operations
+ * Implements business logic following SOLID principles
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
+@Transactional(readOnly = true)
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
@@ -35,149 +34,114 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
 
-    // Password validation pattern
-    private static final Pattern PASSWORD_PATTERN = Pattern.compile(
-            "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$"
-    );
-
     @Override
+    @Transactional
     public UserResponseDto registerUser(UserRegistrationDto registrationDto) {
-        log.info("Attempting to register user with email: {}", registrationDto.getEmail());
+        log.info("Starting user registration for email: {}", registrationDto.getEmail());
 
-        // Validate business rules
-        validateRegistrationData(registrationDto);
-
-        // Check if user already exists
-        if (userRepository.existsByEmail(registrationDto.getEmail().toLowerCase().trim())) {
-            throw new IllegalArgumentException("User with this email already exists");
-        }
-
-        if (userRepository.existsByPhoneNumber(registrationDto.getPhoneNumber())) {
-            throw new IllegalArgumentException("User with this phone number already exists");
-        }
+        // Validate registration data
+        validateUserRegistration(registrationDto);
 
         // Convert DTO to entity
         User user = userMapper.toEntity(registrationDto);
 
         // Hash password
-        user.setPasswordHash(passwordEncoder.encode(registrationDto.getPassword()));
+        String hashedPassword = passwordEncoder.encode(registrationDto.getPassword());
+        user.setPasswordHash(hashedPassword);
 
-        // Assign roles
+        // Get and assign roles
         Set<String> roleNames = userMapper.extractRoleNames(registrationDto);
-        Set<Role> roles = roleService.findRolesByNames(roleNames);
+        Set<Role> roles = roleService.findRoleEntitiesByNames(roleNames);
 
+        // Validate that all requested roles were found
         if (roles.size() != roleNames.size()) {
-            throw new IllegalArgumentException("One or more invalid roles provided");
+            Set<String> foundRoleNames = roles.stream()
+                    .map(Role::getName)
+                    .collect(Collectors.toSet());
+            Set<String> missingRoles = roleNames.stream()
+                    .filter(name -> !foundRoleNames.contains(name))
+                    .collect(Collectors.toSet());
+            throw new RuntimeException("Invalid roles: " + missingRoles);
         }
 
-        // Add roles to user
-        for (Role role : roles) {
-            user.addRole(role);
-        }
+        // Assign roles to user
+        roles.forEach(user::addRole);
 
         // Save user
         User savedUser = userRepository.save(user);
 
-        log.info("Successfully registered user with ID: {} and email: {}",
-                savedUser.getId(), savedUser.getEmail());
-
+        log.info("User registered successfully with ID: {}", savedUser.getId());
         return userMapper.toResponseDto(savedUser);
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public Optional<UserResponseDto> findUserByEmail(String email) {
-        log.debug("Finding user by email: {}", email);
-
-        return userRepository.findByEmail(email.toLowerCase().trim())
-                .map(userMapper::toResponseDto);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public Optional<UserResponseDto> findUserById(Long userId) {
         log.debug("Finding user by ID: {}", userId);
-
         return userRepository.findById(userId)
                 .map(userMapper::toResponseDto);
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public boolean existsByEmail(String email) {
-        return userRepository.existsByEmail(email.toLowerCase().trim());
+    public Optional<UserResponseDto> findUserByEmail(String email) {
+        log.debug("Finding user by email: {}", email);
+        return userRepository.findByEmail(email.toLowerCase().trim())
+                .map(userMapper::toResponseDto);
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public boolean existsByPhoneNumber(String phoneNumber) {
-        return userRepository.existsByPhoneNumber(phoneNumber);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<UserResponseDto> getAllUsers() {
-        log.debug("Retrieving all users");
-
-        return userRepository.findAll()
+    public List<UserResponseDto> findUsersByCountry(String country) {
+        log.debug("Finding users by country: {}", country);
+        return userRepository.findByCountry(country.toUpperCase())
                 .stream()
                 .map(userMapper::toResponseDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public boolean isValidPassword(String password) {
-        if (password == null || password.length() < 8) {
-            return false;
-        }
-        return PASSWORD_PATTERN.matcher(password).matches();
+    public boolean existsByEmail(String email) {
+        log.debug("Checking if email exists: {}", email);
+        return userRepository.existsByEmail(email.toLowerCase().trim());
     }
 
     @Override
-    public boolean passwordsMatch(String password, String confirmPassword) {
-        return password != null && password.equals(confirmPassword);
+    public boolean existsByPhoneNumber(String phoneNumber) {
+        log.debug("Checking if phone number exists: {}", phoneNumber);
+        return userRepository.existsByPhoneNumber(phoneNumber);
     }
 
-    /**
-     * Validate registration data according to business rules
-     *
-     * @param dto the registration data to validate
-     * @throws IllegalArgumentException if validation fails
-     */
-    private void validateRegistrationData(UserRegistrationDto dto) {
-        // Password validation
-        if (!isValidPassword(dto.getPassword())) {
-            throw new IllegalArgumentException(
-                    "Password must be at least 8 characters and contain uppercase, lowercase, number, and special character"
-            );
-        }
-
-        // Password confirmation
-        if (!passwordsMatch(dto.getPassword(), dto.getConfirmPassword())) {
-            throw new IllegalArgumentException("Passwords do not match");
-        }
-
-        // Role validation
-        Set<String> roleNames = userMapper.extractRoleNames(dto);
-        if (!roleService.validateRoles(roleNames)) {
-            throw new IllegalArgumentException("One or more invalid roles provided");
-        }
-
-        // Additional business validations can be added here
-        validateEmailDomain(dto.getEmail());
+    @Override
+    public long countUsersByRole(String roleName) {
+        log.debug("Counting users by role: {}", roleName);
+        return userRepository.countByRoleName(roleName.toUpperCase());
     }
 
-    /**
-     * Optional: Validate email domain (can be extended for business requirements)
-     *
-     * @param email the email to validate
-     */
-    private void validateEmailDomain(String email) {
-        // Example: Block certain domains if needed
-        String domain = email.substring(email.lastIndexOf("@") + 1).toLowerCase();
+    @Override
+    public void validateUserRegistration(UserRegistrationDto registrationDto) {
+        log.debug("Validating user registration data");
 
-        // Add any domain-specific validations here
-        // For now, we'll just log it
-        log.debug("Registering user with email domain: {}", domain);
+        // Check if email already exists
+        if (existsByEmail(registrationDto.getEmail())) {
+            throw new RuntimeException("Email already exists: " + registrationDto.getEmail());
+        }
+
+        // Check if phone number already exists (if provided)
+        if (registrationDto.getPhoneNumber() != null &&
+                !registrationDto.getPhoneNumber().trim().isEmpty() &&
+                existsByPhoneNumber(registrationDto.getPhoneNumber())) {
+            throw new RuntimeException("Phone number already exists: " + registrationDto.getPhoneNumber());
+        }
+
+        // Validate password confirmation
+        if (!registrationDto.getPassword().equals(registrationDto.getConfirmPassword())) {
+            throw new RuntimeException("Password and confirm password do not match");
+        }
+
+        // Validate roles
+        Set<String> invalidRoles = roleService.validateRoleNames(registrationDto.getRoles());
+        if (!invalidRoles.isEmpty()) {
+            throw new RuntimeException("Invalid roles: " + invalidRoles);
+        }
+
+        log.debug("User registration validation completed successfully");
     }
 }

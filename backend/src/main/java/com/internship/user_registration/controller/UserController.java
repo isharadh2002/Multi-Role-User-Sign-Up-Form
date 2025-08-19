@@ -3,6 +3,7 @@ package com.internship.user_registration.controller;
 import com.internship.user_registration.dto.ApiResponseDto;
 import com.internship.user_registration.dto.UserRegistrationDto;
 import com.internship.user_registration.dto.UserResponseDto;
+import com.internship.user_registration.dto.ValidationErrorDto;
 import com.internship.user_registration.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -13,156 +14,109 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
- * REST Controller for user registration and management
- * Following RESTful API principles
+ * REST Controller for user registration operations
+ * Follows RESTful principles and proper HTTP status codes
  */
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "User Authentication", description = "User registration and authentication endpoints")
-//@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"})
+@Tag(name = "User Registration", description = "APIs for user registration and authentication")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"}) // Frontend URLs
 public class UserController {
 
     private final UserService userService;
 
-    @Operation(
-            summary = "Register a new user",
-            description = "Creates a new user account with the provided information and assigned roles"
-    )
+    @PostMapping("/register")
+    @Operation(summary = "Register a new user", description = "Creates a new user account with the provided information")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "User registered successfully",
                     content = @Content(schema = @Schema(implementation = ApiResponseDto.class))),
-            @ApiResponse(responseCode = "400", description = "Invalid input data or user already exists",
+            @ApiResponse(responseCode = "400", description = "Invalid input or validation error",
                     content = @Content(schema = @Schema(implementation = ApiResponseDto.class))),
-            @ApiResponse(responseCode = "500", description = "Internal server error",
+            @ApiResponse(responseCode = "409", description = "Email or phone number already exists",
                     content = @Content(schema = @Schema(implementation = ApiResponseDto.class)))
     })
-    @PostMapping("/register")
     public ResponseEntity<ApiResponseDto<UserResponseDto>> registerUser(
-            @Valid @RequestBody UserRegistrationDto registrationDto) {
+            @Valid @RequestBody UserRegistrationDto registrationDto,
+            BindingResult bindingResult) {
 
-        log.info("Received registration request for email: {}", registrationDto.getEmail());
+        log.info("Registration request received for email: {}", registrationDto.getEmail());
+
+        // Check for validation errors
+        if (bindingResult.hasErrors()) {
+            List<ValidationErrorDto> errors = bindingResult.getFieldErrors()
+                    .stream()
+                    .map(this::mapFieldError)
+                    .collect(Collectors.toList());
+
+            log.warn("Validation errors in registration request: {}", errors.size());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponseDto.error("Validation failed", errors));
+        }
 
         try {
+            // Register user
             UserResponseDto userResponse = userService.registerUser(registrationDto);
 
-            ApiResponseDto<UserResponseDto> response = ApiResponseDto.success(
-                    "User registered successfully",
-                    userResponse
-            );
+            log.info("User registered successfully with ID: {}", userResponse.getUserId());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponseDto.success("User registered successfully", userResponse));
 
-            log.info("Successfully registered user with ID: {}", userResponse.getUserId());
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (RuntimeException e) {
+            log.error("Registration failed for email {}: {}", registrationDto.getEmail(), e.getMessage());
 
-        } catch (IllegalArgumentException e) {
-            log.warn("Registration failed for email {}: {}", registrationDto.getEmail(), e.getMessage());
+            // Handle specific business logic errors
+            if (e.getMessage().contains("already exists")) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(ApiResponseDto.error(e.getMessage()));
+            }
 
-            ApiResponseDto<UserResponseDto> response = ApiResponseDto.error(e.getMessage());
-            return ResponseEntity.badRequest().body(response);
-
+            return ResponseEntity.badRequest()
+                    .body(ApiResponseDto.error(e.getMessage()));
         } catch (Exception e) {
-            log.error("Unexpected error during registration for email {}: {}",
-                    registrationDto.getEmail(), e.getMessage(), e);
-
-            ApiResponseDto<UserResponseDto> response = ApiResponseDto.error(
-                    "An unexpected error occurred during registration"
-            );
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            log.error("Unexpected error during registration", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponseDto.error("Registration failed due to server error"));
         }
     }
 
-    @Operation(
-            summary = "Check if email exists",
-            description = "Checks whether a user with the given email already exists"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Email availability checked successfully"),
-            @ApiResponse(responseCode = "400", description = "Invalid email format")
-    })
     @GetMapping("/check-email")
-    public ResponseEntity<ApiResponseDto<Boolean>> checkEmailExists(@RequestParam String email) {
+    @Operation(summary = "Check email availability", description = "Checks if an email is already registered")
+    public ResponseEntity<ApiResponseDto<Boolean>> checkEmailAvailability(
+            @RequestParam String email) {
+
         log.debug("Checking email availability for: {}", email);
 
-        try {
-            boolean exists = userService.existsByEmail(email);
+        boolean exists = userService.existsByEmail(email);
+        boolean available = !exists;
 
-            ApiResponseDto<Boolean> response = ApiResponseDto.success(
-                    exists ? "Email is already taken" : "Email is available",
-                    exists
-            );
-
-            return ResponseEntity.ok(response);
-
-        } catch (Exception e) {
-            log.error("Error checking email availability: {}", e.getMessage());
-
-            ApiResponseDto<Boolean> response = ApiResponseDto.error("Error checking email availability");
-            return ResponseEntity.badRequest().body(response);
-        }
+        return ResponseEntity.ok(
+                ApiResponseDto.success(
+                        available ? "Email is available" : "Email is already registered",
+                        available
+                )
+        );
     }
 
-    @Operation(
-            summary = "Get user by email",
-            description = "Retrieves user information by email address"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "User found"),
-            @ApiResponse(responseCode = "404", description = "User not found")
-    })
-    @GetMapping("/user")
-    public ResponseEntity<ApiResponseDto<UserResponseDto>> getUserByEmail(@RequestParam String email) {
-        log.debug("Getting user by email: {}", email);
-
-        Optional<UserResponseDto> user = userService.findUserByEmail(email);
-
-        if (user.isPresent()) {
-            ApiResponseDto<UserResponseDto> response = ApiResponseDto.success(
-                    "User found",
-                    user.get()
-            );
-            return ResponseEntity.ok(response);
-        } else {
-            ApiResponseDto<UserResponseDto> response = ApiResponseDto.error("User not found");
-            return ResponseEntity.notFound().build();
-        }
-    }
-
-    @Operation(
-            summary = "Get all users",
-            description = "Retrieves all registered users (admin functionality)"
-    )
-    @ApiResponse(responseCode = "200", description = "Users retrieved successfully")
-    @GetMapping("/users")
-    public ResponseEntity<ApiResponseDto<List<UserResponseDto>>> getAllUsers() {
-        log.debug("Getting all users");
-
-        try {
-            List<UserResponseDto> users = userService.getAllUsers();
-
-            ApiResponseDto<List<UserResponseDto>> response = ApiResponseDto.success(
-                    "Users retrieved successfully",
-                    users
-            );
-
-            return ResponseEntity.ok(response);
-
-        } catch (Exception e) {
-            log.error("Error retrieving users: {}", e.getMessage());
-
-            ApiResponseDto<List<UserResponseDto>> response = ApiResponseDto.error(
-                    "Error retrieving users"
-            );
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        }
+    /**
+     * Helper method to map Spring validation errors to our custom error DTO
+     */
+    private ValidationErrorDto mapFieldError(FieldError fieldError) {
+        return ValidationErrorDto.builder()
+                .field(fieldError.getField())
+                .message(fieldError.getDefaultMessage())
+                .rejectedValue(fieldError.getRejectedValue())
+                .build();
     }
 }
