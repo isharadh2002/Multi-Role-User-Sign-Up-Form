@@ -31,11 +31,24 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findByEmail(email.toLowerCase().trim())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
+        log.debug("User found with roles: {}", user.getRoles().stream().map(role -> role.getName()).collect(Collectors.toList()));
+
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail())
                 .password(user.getPasswordHash())
                 .authorities(user.getRoles().stream()
-                        .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName().toUpperCase().replace(" ", "_")))
+                        .map(role -> {
+                            // Convert role name to proper authority format
+                            String roleName = role.getName();
+                            // Handle "Admin" role specifically
+                            if ("Admin".equals(roleName)) {
+                                return new SimpleGrantedAuthority("ROLE_ADMIN");
+                            }
+                            // For other roles, convert spaces to underscores and uppercase
+                            String authority = "ROLE_" + roleName.toUpperCase().replace(" ", "_");
+                            log.debug("Converting role '{}' to authority '{}'", roleName, authority);
+                            return new SimpleGrantedAuthority(authority);
+                        })
                         .collect(Collectors.toList()))
                 .build();
     }

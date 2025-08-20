@@ -29,7 +29,7 @@ import java.util.List;
 @Slf4j
 @Tag(name = "Admin Management", description = "APIs for admin-only operations")
 @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"})
-@PreAuthorize("hasRole('admin')")
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
 
     private final UserService userService;
