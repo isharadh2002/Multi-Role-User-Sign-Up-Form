@@ -49,7 +49,7 @@ public class UserServiceImpl implements UserService {
         String hashedPassword = passwordEncoder.encode(registrationDto.getPassword());
         user.setPasswordHash(hashedPassword);
 
-        // Get and assign roles - use the mapper method that handles proper case conversion
+        // Get and assign roles
         Set<String> roleNames = userMapper.extractRoleNames(registrationDto);
         Set<Role> roles = roleService.findRoleEntitiesByNames(roleNames);
 
@@ -98,9 +98,80 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public List<UserResponseDto> findAllUsers() {
+        log.debug("Finding all users");
+        return userRepository.findAll()
+                .stream()
+                .map(userMapper::toResponseDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public UserResponseDto updateUserProfile(String email, UserRegistrationDto updateDto) {
+        log.info("Updating profile for user: {}", email);
+
+        // Find existing user
+        User existingUser = userRepository.findByEmail(email.toLowerCase().trim())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Check if new email is different and already exists
+        if (!existingUser.getEmail().equals(updateDto.getEmail().toLowerCase().trim()) &&
+                existsByEmail(updateDto.getEmail())) {
+            throw new RuntimeException("Email already exists: " + updateDto.getEmail());
+        }
+
+        // Check if new phone number is different and already exists
+        if (updateDto.getPhoneNumber() != null &&
+                !updateDto.getPhoneNumber().equals(existingUser.getPhoneNumber()) &&
+                existsByPhoneNumber(updateDto.getPhoneNumber())) {
+            throw new RuntimeException("Phone number already exists: " + updateDto.getPhoneNumber());
+        }
+
+        // Update basic information
+        userMapper.updateEntityFromDto(existingUser, updateDto);
+
+        // Update password if provided
+        if (updateDto.getPassword() != null && !updateDto.getPassword().trim().isEmpty()) {
+            if (!updateDto.getPassword().equals(updateDto.getConfirmPassword())) {
+                throw new RuntimeException("Password and confirm password do not match");
+            }
+            String hashedPassword = passwordEncoder.encode(updateDto.getPassword());
+            existingUser.setPasswordHash(hashedPassword);
+        }
+
+        // Update roles if provided
+        if (updateDto.getRoles() != null && !updateDto.getRoles().isEmpty()) {
+            Set<String> roleNames = userMapper.extractRoleNames(updateDto);
+            Set<Role> newRoles = roleService.findRoleEntitiesByNames(roleNames);
+
+            // Clear existing roles and add new ones
+            existingUser.getRoles().clear();
+            newRoles.forEach(existingUser::addRole);
+        }
+
+        // Save updated user
+        User updatedUser = userRepository.save(existingUser);
+
+        log.info("Profile updated successfully for user: {}", email);
+        return userMapper.toResponseDto(updatedUser);
+    }
+
+    @Override
+    @Transactional
+    public void deleteUser(Long userId) {
+        log.info("Deleting user with ID: {}", userId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+
+        userRepository.delete(user);
+        log.info("User deleted successfully with ID: {}", userId);
+    }
+
+    @Override
     public boolean existsByEmail(String email) {
         log.debug("Checking if email exists: {}", email);
-        log.debug("Output of existsByEmail: {}", userRepository.existsByEmail(email.toLowerCase().trim()));
         return userRepository.existsByEmail(email.toLowerCase().trim());
     }
 
@@ -113,7 +184,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public long countUsersByRole(String roleName) {
         log.debug("Counting users by role: {}", roleName);
-        return userRepository.countByRoleName(roleName);
+        return userRepository.countByRoleName(roleName.toUpperCase());
     }
 
     @Override
@@ -142,9 +213,8 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("Password must be at least 8 characters long");
         }
 
-        // Validate roles - use the mapper to convert to proper case format
-        Set<String> properCaseRoleNames = userMapper.extractRoleNames(registrationDto);
-        Set<String> invalidRoles = roleService.validateRoleNames(properCaseRoleNames);
+        // Validate roles
+        Set<String> invalidRoles = roleService.validateRoleNames(registrationDto.getRoles());
         if (!invalidRoles.isEmpty()) {
             throw new RuntimeException("Invalid roles: " + invalidRoles);
         }

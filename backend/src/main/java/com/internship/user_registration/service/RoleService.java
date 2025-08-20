@@ -68,6 +68,35 @@ public interface RoleService {
     Set<String> getAllRoleNames();
 
     /**
+     * Create a new role (Admin only)
+     *
+     * @param name role name
+     * @param description role description
+     * @return created role DTO
+     * @throws RuntimeException if role already exists
+     */
+    RoleResponseDto createRole(String name, String description);
+
+    /**
+     * Update existing role (Admin only)
+     *
+     * @param roleId role ID to update
+     * @param name new role name (optional)
+     * @param description new role description (optional)
+     * @return updated role DTO
+     * @throws RuntimeException if role not found
+     */
+    RoleResponseDto updateRole(Long roleId, String name, String description);
+
+    /**
+     * Delete role by ID (Admin only)
+     *
+     * @param roleId role ID to delete
+     * @throws RuntimeException if role not found or role is in use
+     */
+    void deleteRole(Long roleId);
+
+    /**
      * Initialize default roles if they don't exist
      * Should be called during application startup
      */

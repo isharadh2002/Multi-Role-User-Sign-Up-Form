@@ -47,6 +47,31 @@ public interface UserService {
     List<UserResponseDto> findUsersByCountry(String country);
 
     /**
+     * Find all users (Admin only)
+     *
+     * @return list of all users
+     */
+    List<UserResponseDto> findAllUsers();
+
+    /**
+     * Update user profile
+     *
+     * @param email user email
+     * @param updateDto updated user data
+     * @return updated UserResponseDto
+     * @throws RuntimeException if user not found or validation fails
+     */
+    UserResponseDto updateUserProfile(String email, UserRegistrationDto updateDto);
+
+    /**
+     * Delete user by ID (Admin only)
+     *
+     * @param userId the user ID to delete
+     * @throws RuntimeException if user not found
+     */
+    void deleteUser(Long userId);
+
+    /**
      * Check if email already exists
      *
      * @param email the email to check
