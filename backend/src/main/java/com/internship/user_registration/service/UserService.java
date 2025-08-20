@@ -2,6 +2,7 @@ package com.internship.user_registration.service;
 
 import com.internship.user_registration.dto.UserRegistrationDto;
 import com.internship.user_registration.dto.UserResponseDto;
+import com.internship.user_registration.dto.UserUpdateDto;
 import com.internship.user_registration.entity.User;
 
 import java.util.List;
@@ -61,7 +62,7 @@ public interface UserService {
      * @return updated UserResponseDto
      * @throws RuntimeException if user not found or validation fails
      */
-    UserResponseDto updateUserProfile(String email, UserRegistrationDto updateDto);
+    UserResponseDto updateUserProfile(String email, UserUpdateDto updateDto);
 
     /**
      * Delete user by ID (Admin only)

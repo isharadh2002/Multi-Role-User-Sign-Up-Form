@@ -1,5 +1,6 @@
 package com.internship.user_registration.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
@@ -11,9 +12,10 @@ public class LoginRequestDto {
 
     @NotBlank(message = "Email is required")
     @Email(message = "Please provide a valid email address")
+    @JsonProperty("email")
     private String email;
 
     @NotBlank(message = "Password is required")
-    @Size(min = 8, message = "Password must be at least 8 characters")
+    @JsonProperty("password")
     private String password;
 }

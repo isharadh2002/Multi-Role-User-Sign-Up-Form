@@ -2,6 +2,7 @@ package com.internship.user_registration.mapper;
 
 import com.internship.user_registration.dto.UserRegistrationDto;
 import com.internship.user_registration.dto.UserResponseDto;
+import com.internship.user_registration.dto.UserUpdateDto;
 import com.internship.user_registration.entity.Role;
 import com.internship.user_registration.entity.User;
 import org.springframework.stereotype.Component;
@@ -85,6 +86,24 @@ public class UserMapper {
     }
 
     /**
+     * Update existing user entity with data from UserUpdateDto
+     *
+     * @param user existing user entity
+     * @param dto update data
+     */
+    public void updateEntityFromUpdateDto(User user, UserUpdateDto dto) {
+        if (user == null || dto == null) {
+            return;
+        }
+
+        user.setFirstName(dto.getFirstName());
+        user.setLastName(dto.getLastName());
+        user.setEmail(dto.getEmail().toLowerCase().trim());
+        user.setPhoneNumber(dto.getPhoneNumber());
+        user.setCountry(dto.getCountry());
+    }
+
+    /**
      * Extract role names from registration DTO
      * Converts role names to proper case format
      *
@@ -92,6 +111,17 @@ public class UserMapper {
      * @return set of role names in proper case
      */
     public Set<String> extractRoleNames(UserRegistrationDto dto) {
+        if (dto == null || dto.getRoles() == null) {
+            return Set.of();
+        }
+
+        return dto.getRoles().stream()
+                .map(String::trim)
+                .map(this::convertToProperCase)
+                .collect(Collectors.toSet());
+    }
+
+    public Set<String> extractRoleNames(UserUpdateDto dto) {
         if (dto == null || dto.getRoles() == null) {
             return Set.of();
         }

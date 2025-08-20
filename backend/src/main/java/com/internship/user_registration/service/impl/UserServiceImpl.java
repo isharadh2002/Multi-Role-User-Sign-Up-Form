@@ -2,6 +2,7 @@ package com.internship.user_registration.service.impl;
 
 import com.internship.user_registration.dto.UserRegistrationDto;
 import com.internship.user_registration.dto.UserResponseDto;
+import com.internship.user_registration.dto.UserUpdateDto;
 import com.internship.user_registration.entity.Role;
 import com.internship.user_registration.entity.User;
 import com.internship.user_registration.mapper.UserMapper;
@@ -108,7 +109,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public UserResponseDto updateUserProfile(String email, UserRegistrationDto updateDto) {
+    public UserResponseDto updateUserProfile(String email, UserUpdateDto updateDto) {
         log.info("Updating profile for user: {}", email);
 
         // Find existing user
@@ -129,16 +130,7 @@ public class UserServiceImpl implements UserService {
         }
 
         // Update basic information
-        userMapper.updateEntityFromDto(existingUser, updateDto);
-
-        // Update password if provided
-        if (updateDto.getPassword() != null && !updateDto.getPassword().trim().isEmpty()) {
-            if (!updateDto.getPassword().equals(updateDto.getConfirmPassword())) {
-                throw new RuntimeException("Password and confirm password do not match");
-            }
-            String hashedPassword = passwordEncoder.encode(updateDto.getPassword());
-            existingUser.setPasswordHash(hashedPassword);
-        }
+        userMapper.updateEntityFromUpdateDto(existingUser, updateDto);
 
         // Update roles if provided
         if (updateDto.getRoles() != null && !updateDto.getRoles().isEmpty()) {

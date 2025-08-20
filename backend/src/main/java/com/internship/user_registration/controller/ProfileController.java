@@ -1,9 +1,6 @@
 package com.internship.user_registration.controller;
 
-import com.internship.user_registration.dto.ApiResponseDto;
-import com.internship.user_registration.dto.UserRegistrationDto;
-import com.internship.user_registration.dto.UserResponseDto;
-import com.internship.user_registration.dto.ValidationErrorDto;
+import com.internship.user_registration.dto.*;
 import com.internship.user_registration.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -64,7 +61,7 @@ public class ProfileController {
                     content = @Content(schema = @Schema(implementation = ApiResponseDto.class)))
     })
     public ResponseEntity<ApiResponseDto<UserResponseDto>> updateProfile(
-            @Valid @RequestBody UserRegistrationDto updateDto,
+            @Valid @RequestBody UserUpdateDto updateDto,
             BindingResult bindingResult,
             Authentication authentication) {
 
