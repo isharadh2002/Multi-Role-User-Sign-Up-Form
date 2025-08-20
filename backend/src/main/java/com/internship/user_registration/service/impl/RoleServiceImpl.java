@@ -72,7 +72,7 @@ public class RoleServiceImpl implements RoleService {
         Set<String> availableRoles = getAllRoleNames();
 
         return roleNames.stream()
-                .map(String::toUpperCase)
+                .map(String::toString)
                 .filter(roleName -> !availableRoles.contains(roleName))
                 .collect(Collectors.toSet());
     }
