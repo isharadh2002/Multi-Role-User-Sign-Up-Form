@@ -47,23 +47,20 @@ public class RoleServiceImpl implements RoleService {
     @Override
     public Optional<RoleResponseDto> findRoleByName(String name) {
         log.debug("Finding role by name: {}", name);
-        return roleRepository.findByName(name.toUpperCase())
+        return roleRepository.findByName(name)
                 .map(roleMapper::toResponseDto);
     }
 
     @Override
     public Set<Role> findRoleEntitiesByNames(Set<String> roleNames) {
         log.debug("Finding role entities by names: {}", roleNames);
-        Set<String> upperCaseNames = roleNames.stream()
-                .map(String::toUpperCase)
-                .collect(Collectors.toSet());
-        return roleRepository.findByNameIn(upperCaseNames);
+        return roleRepository.findByNameIn(roleNames);
     }
 
     @Override
     public boolean existsByName(String name) {
         log.debug("Checking if role exists by name: {}", name);
-        return roleRepository.existsByName(name.toUpperCase());
+        return roleRepository.existsByName(name);
     }
 
     @Override
@@ -72,7 +69,6 @@ public class RoleServiceImpl implements RoleService {
         Set<String> availableRoles = getAllRoleNames();
 
         return roleNames.stream()
-                .map(String::toUpperCase)
                 .filter(roleName -> !availableRoles.contains(roleName))
                 .collect(Collectors.toSet());
     }

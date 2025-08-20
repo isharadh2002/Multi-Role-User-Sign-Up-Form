@@ -49,7 +49,7 @@ public class UserServiceImpl implements UserService {
         String hashedPassword = passwordEncoder.encode(registrationDto.getPassword());
         user.setPasswordHash(hashedPassword);
 
-        // Get and assign roles
+        // Get and assign roles - use the mapper method that handles proper case conversion
         Set<String> roleNames = userMapper.extractRoleNames(registrationDto);
         Set<Role> roles = roleService.findRoleEntitiesByNames(roleNames);
 
@@ -112,7 +112,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public long countUsersByRole(String roleName) {
         log.debug("Counting users by role: {}", roleName);
-        return userRepository.countByRoleName(roleName.toUpperCase());
+        return userRepository.countByRoleName(roleName);
     }
 
     @Override
@@ -141,8 +141,9 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("Password must be at least 8 characters long");
         }
 
-        // Validate roles
-        Set<String> invalidRoles = roleService.validateRoleNames(registrationDto.getRoles());
+        // Validate roles - use the mapper to convert to proper case format
+        Set<String> properCaseRoleNames = userMapper.extractRoleNames(registrationDto);
+        Set<String> invalidRoles = roleService.validateRoleNames(properCaseRoleNames);
         if (!invalidRoles.isEmpty()) {
             throw new RuntimeException("Invalid roles: " + invalidRoles);
         }
