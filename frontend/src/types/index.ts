@@ -1,12 +1,12 @@
 export interface User {
-    userId: number;
+    user_id: number;
     first_name: string;
     last_name: string;
     email: string;
-    phoneNumber?: string;
+    phone_number?: string;
     country: string;
     roles: string[];
-    createdAt?: string;
+    created_at?: string;
 }
 
 export interface Role {

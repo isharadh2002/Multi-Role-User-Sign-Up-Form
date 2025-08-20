@@ -57,7 +57,7 @@ export default function AdminPage() {
 
     const handleLogout = () => {
         auth.logout();
-        router.push('/login');
+        router.push('/');
     };
 
     const handleDeleteUser = async (userId: number) => {
@@ -253,7 +253,7 @@ export default function AdminPage() {
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
                                 {users.map((user) => (
-                                    <tr key={user.userId} className="hover:bg-gray-50">
+                                    <tr key={user.user_id} className="hover:bg-gray-50">
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
                                                 <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-medium">
@@ -263,13 +263,13 @@ export default function AdminPage() {
                                                     <div className="text-sm font-medium text-gray-900">
                                                         {user.first_name} {user.last_name}
                                                     </div>
-                                                    <div className="text-sm text-gray-500">ID: {user.userId}</div>
+                                                    <div className="text-sm text-gray-500">ID: {user.user_id}</div>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm text-gray-900">{user.email}</div>
-                                            <div className="text-sm text-gray-500">{user.phoneNumber || 'No phone'}</div>
+                                            <div className="text-sm text-gray-500">{user.phone_number || 'No phone'}</div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex flex-wrap gap-1">
@@ -284,14 +284,14 @@ export default function AdminPage() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown'}
+                                            {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <Button
                                                 variant="danger"
-                                                onClick={() => handleDeleteUser(user.userId)}
-                                                disabled={user.roles.includes('Admin') || deletingUserId === user.userId}
-                                                loading={deletingUserId === user.userId}
+                                                onClick={() => handleDeleteUser(user.user_id)}
+                                                disabled={user.roles.includes('Admin') || deletingUserId === user.user_id}
+                                                loading={deletingUserId === user.user_id}
                                                 className="text-xs px-3 py-1"
                                             >
                                                 {user.roles.includes('Admin') ? 'Protected' : 'Delete'}

@@ -11,21 +11,21 @@ import {Alert} from '@/components/ui/Alert';
 import {COUNTRIES} from '@/constants';
 
 interface User {
-    userId: number;
-    firstName: string;
-    lastName: string;
+    user_id: number;
+    first_name: string;
+    last_name: string;
     email: string;
-    phoneNumber?: string;
+    phone_number?: string;
     country: string;
     roles: string[];
-    createdAt?: string;
+    created_at?: string;
 }
 
 interface Role {
-    roleId: number;
+    role_id: number;
     name: string;
     description: string;
-    userCount?: number;
+    user_count?: number;
 }
 
 export default function DashboardPage() {
@@ -74,10 +74,10 @@ export default function DashboardPage() {
             if (userResponse.success && userResponse.data) {
                 setUser(userResponse.data);
                 setEditForm({
-                    firstName: userResponse.data.firstName,
-                    lastName: userResponse.data.lastName,
+                    firstName: userResponse.data.first_name,
+                    lastName: userResponse.data.last_name,
                     email: userResponse.data.email,
-                    phoneNumber: userResponse.data.phoneNumber || '',
+                    phoneNumber: userResponse.data.phone_number || '',
                     country: userResponse.data.country,
                     roles: userResponse.data.roles
                 });
@@ -96,7 +96,7 @@ export default function DashboardPage() {
 
     const handleLogout = () => {
         auth.logout();
-        router.push('/login');
+        router.push('/');
     };
 
     const validateEditForm = () => {
@@ -142,8 +142,8 @@ export default function DashboardPage() {
 
                 // Update localStorage
                 localStorage.setItem('email', response.data.email);
-                localStorage.setItem('firstName', response.data.firstName);
-                localStorage.setItem('lastName', response.data.lastName);
+                localStorage.setItem('firstName', response.data.first_name);
+                localStorage.setItem('lastName', response.data.last_name);
                 localStorage.setItem('roles', JSON.stringify(response.data.roles));
             } else {
                 if (response.errors) {
@@ -202,7 +202,7 @@ export default function DashboardPage() {
                         <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
                         <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-700">
-                Welcome, {user?.firstName} {user?.lastName}
+                Welcome, {user?.first_name} {user?.last_name}
               </span>
                             {isAdmin && (
                                 <Button
@@ -235,11 +235,11 @@ export default function DashboardPage() {
                         <div className="flex items-center">
                             <div
                                 className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-2xl font-bold text-blue-600">
-                                {user?.firstName?.[0]}{user?.lastName?.[0]}
+                                {user?.first_name?.[0]}{user?.last_name?.[0]}
                             </div>
                             <div className="ml-6">
                                 <h2 className="text-2xl font-bold text-white">
-                                    {user?.firstName} {user?.lastName}
+                                    {user?.first_name} {user?.last_name}
                                 </h2>
                                 <p className="text-blue-100">{user?.email}</p>
                                 <div className="flex flex-wrap gap-2 mt-2">
@@ -263,7 +263,7 @@ export default function DashboardPage() {
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Phone
                                             Number</label>
-                                        <p className="text-gray-900">{user?.phoneNumber || 'Not provided'}</p>
+                                        <p className="text-gray-900">{user?.phone_number || 'Not provided'}</p>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
@@ -273,12 +273,12 @@ export default function DashboardPage() {
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Member
                                             Since</label>
                                         <p className="text-gray-900">
-                                            {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown'}
+                                            {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}
                                         </p>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">User ID</label>
-                                        <p className="text-gray-900">{user?.userId}</p>
+                                        <p className="text-gray-900">{user?.user_id}</p>
                                     </div>
                                 </div>
 
@@ -358,7 +358,7 @@ export default function DashboardPage() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         {roles.map(role => (
                                             <label
-                                                key={role.roleId}
+                                                key={role.role_id}
                                                 className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
                                             >
                                                 <input
@@ -389,10 +389,10 @@ export default function DashboardPage() {
                                             setIsEditing(false);
                                             setErrors({});
                                             setEditForm({
-                                                firstName: user?.firstName || '',
-                                                lastName: user?.lastName || '',
+                                                firstName: user?.first_name || '',
+                                                lastName: user?.last_name || '',
                                                 email: user?.email || '',
-                                                phoneNumber: user?.phoneNumber || '',
+                                                phoneNumber: user?.phone_number || '',
                                                 country: user?.country || '',
                                                 roles: user?.roles || []
                                             });
