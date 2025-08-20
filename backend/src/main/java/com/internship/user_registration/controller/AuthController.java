@@ -68,6 +68,13 @@ public class AuthController {
                     content = @Content(schema = @Schema(implementation = ApiResponseDto.class)))
     })
     public ResponseEntity<ApiResponseDto<LoginResponseDto>> getCurrentUser(Authentication authentication) {
+        // Check if authentication is null
+        if (authentication == null || authentication.getName() == null) {
+            log.warn("Authentication is null or has no name");
+            return ResponseEntity.status(401)
+                    .body(ApiResponseDto.error("Authentication required"));
+        }
+
         log.debug("Getting current user details for: {}", authentication.getName());
 
         try {
