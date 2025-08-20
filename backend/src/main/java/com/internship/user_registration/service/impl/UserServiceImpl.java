@@ -100,6 +100,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public boolean existsByEmail(String email) {
         log.debug("Checking if email exists: {}", email);
+        log.debug("Output of existsByEmail: {}", userRepository.existsByEmail(email.toLowerCase().trim()));
         return userRepository.existsByEmail(email.toLowerCase().trim());
     }
 
