@@ -1,5 +1,6 @@
 package com.internship.user_registration.service;
 
+import com.internship.user_registration.dto.PasswordChangeDto;
 import com.internship.user_registration.dto.UserRegistrationDto;
 import com.internship.user_registration.dto.UserResponseDto;
 import com.internship.user_registration.dto.UserUpdateDto;
@@ -104,4 +105,14 @@ public interface UserService {
      * @throws RuntimeException if validation fails
      */
     void validateUserRegistration(UserRegistrationDto registrationDto);
+
+    /**
+     * Change user password
+     *
+     * @param email user email
+     * @param passwordChangeDto password change data
+     * @throws RuntimeException if current password is invalid or validation fails
+     */
+    void changePassword(String email, PasswordChangeDto passwordChangeDto);
+
 }

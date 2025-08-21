@@ -106,4 +106,50 @@ public class ProfileController {
                 .rejectedValue(fieldError.getRejectedValue())
                 .build();
     }
+
+    @PutMapping("/change-password")
+    @Operation(summary = "Change user password", description = "Change current user's password")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Password changed successfully",
+                    content = @Content(schema = @Schema(implementation = ApiResponseDto.class))),
+            @ApiResponse(responseCode = "400", description = "Validation error or invalid current password",
+                    content = @Content(schema = @Schema(implementation = ApiResponseDto.class))),
+            @ApiResponse(responseCode = "404", description = "User not found",
+                    content = @Content(schema = @Schema(implementation = ApiResponseDto.class)))
+    })
+    public ResponseEntity<ApiResponseDto<Void>> changePassword(
+            @Valid @RequestBody PasswordChangeDto passwordChangeDto,
+            BindingResult bindingResult,
+            Authentication authentication) {
+
+        log.info("Password change request for user: {}", authentication.getName());
+
+        // Check for validation errors
+        if (bindingResult.hasErrors()) {
+            List<ValidationErrorDto> errors = bindingResult.getFieldErrors()
+                    .stream()
+                    .map(this::mapFieldError)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.badRequest()
+                    .body(ApiResponseDto.error("Validation failed", errors));
+        }
+
+        try {
+            userService.changePassword(authentication.getName(), passwordChangeDto);
+
+            return ResponseEntity.ok(
+                    ApiResponseDto.success("Password changed successfully")
+            );
+
+        } catch (RuntimeException e) {
+            log.error("Password change failed for user {}: {}", authentication.getName(), e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponseDto.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("Unexpected error during password change", e);
+            return ResponseEntity.status(500)
+                    .body(ApiResponseDto.error("Password change failed due to server error"));
+        }
+    }
 }

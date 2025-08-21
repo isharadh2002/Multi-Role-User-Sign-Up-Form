@@ -1,5 +1,6 @@
 package com.internship.user_registration.service.impl;
 
+import com.internship.user_registration.dto.PasswordChangeDto;
 import com.internship.user_registration.dto.UserRegistrationDto;
 import com.internship.user_registration.dto.UserResponseDto;
 import com.internship.user_registration.dto.UserUpdateDto;
@@ -213,4 +214,63 @@ public class UserServiceImpl implements UserService {
 
         log.debug("User registration validation completed successfully");
     }
+
+    @Override
+    @Transactional
+    public void changePassword(String email, PasswordChangeDto passwordChangeDto) {
+        log.info("Changing password for user: {}", email);
+
+        // Validate password change request
+        validatePasswordChange(passwordChangeDto);
+
+        // Find existing user
+        User existingUser = userRepository.findByEmail(email.toLowerCase().trim())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Verify current password
+        if (!passwordEncoder.matches(passwordChangeDto.getCurrentPassword(), existingUser.getPasswordHash())) {
+            log.warn("Invalid current password attempt for user: {}", email);
+            throw new RuntimeException("Current password is incorrect");
+        }
+
+        // Hash new password and update
+        String hashedNewPassword = passwordEncoder.encode(passwordChangeDto.getNewPassword());
+        existingUser.setPasswordHash(hashedNewPassword);
+
+        // Save updated user
+        userRepository.save(existingUser);
+
+        log.info("Password changed successfully for user: {}", email);
+    }
+
+    /**
+     * Validate password change data
+     */
+    private void validatePasswordChange(PasswordChangeDto passwordChangeDto) {
+        log.debug("Validating password change data");
+
+        // Check if new password and confirm password match
+        if (!passwordChangeDto.getNewPassword().equals(passwordChangeDto.getConfirmNewPassword())) {
+            throw new RuntimeException("New password and confirm password do not match");
+        }
+
+        // Check if current password is different from new password
+        if (passwordChangeDto.getCurrentPassword().equals(passwordChangeDto.getNewPassword())) {
+            throw new RuntimeException("New password must be different from current password");
+        }
+
+        // Validate new password strength (reuse existing validation logic)
+        if (passwordChangeDto.getNewPassword().length() < 8) {
+            throw new RuntimeException("New password must be at least 8 characters long");
+        }
+
+        // Additional password strength validation can be added here
+        String passwordPattern = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&_#])[A-Za-z\\d@$!%*?&_#]+$";
+        if (!passwordChangeDto.getNewPassword().matches(passwordPattern)) {
+            throw new RuntimeException("New password must contain at least one uppercase letter, one lowercase letter, one number, and one special character");
+        }
+
+        log.debug("Password change validation completed successfully");
+    }
+
 }
