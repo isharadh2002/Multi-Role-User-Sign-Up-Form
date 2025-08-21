@@ -1,4 +1,3 @@
-// app/login/page.tsx - Fixed Login Page
 'use client';
 
 import { useState } from 'react';
@@ -28,6 +27,7 @@ export default function LoginPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
 
     const [formData, setFormData] = useState<LoginData>({
         email: '',
@@ -49,14 +49,16 @@ export default function LoginPage() {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
-
-        if (!validateForm()) return;
-
-        setLoading(true);
+    const handleSubmit = async () => {
         try {
+            // Clear previous messages
+            setError('');
+            setSuccess('');
+
+            if (!validateForm()) return;
+
+            setLoading(true);
+
             const response = await api.post<LoginResponse>('/api/v1/auth/login', formData);
 
             if (response.success && response.data) {
@@ -70,12 +72,21 @@ export default function LoginPage() {
                 localStorage.setItem('lastName', loginData.last_name);
                 localStorage.setItem('roles', JSON.stringify(loginData.roles));
 
-                // Redirect to dashboard
-                router.push('/dashboard');
+                // Show success message
+                setSuccess('Login successful! Redirecting to dashboard...');
+
+                // Redirect after 2 seconds
+                setTimeout(() => {
+                    router.push('/dashboard');
+                }, 2000);
+
             } else {
+                // Use the backend error message directly
                 setError(response.message || 'Login failed');
             }
-        } catch (error) {
+        } catch (error: any) {
+            // Handle any errors that might cause page refresh
+            console.error('Login error:', error);
             setError('Network error. Please try again.');
         } finally {
             setLoading(false);
@@ -84,9 +95,15 @@ export default function LoginPage() {
 
     const handleInputChange = (name: keyof LoginData, value: string) => {
         setFormData(prev => ({ ...prev, [name]: value }));
+
+        // Clear field-specific error when user starts typing
         if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: '' }));
         }
+
+        // Clear general error and success messages when user modifies form
+        if (error) setError('');
+        if (success) setSuccess('');
     };
 
     return (
@@ -97,9 +114,19 @@ export default function LoginPage() {
                     <p className="text-gray-600">Sign in to your account</p>
                 </div>
 
-                {error && <Alert type="error" className="mb-6">{error}</Alert>}
+                {error && (
+                    <Alert type="error" className="mb-6">
+                        {error}
+                    </Alert>
+                )}
 
-                <form onSubmit={handleSubmit} className="space-y-6">
+                {success && (
+                    <Alert type="success" className="mb-6">
+                        {success}
+                    </Alert>
+                )}
+
+                <div className="space-y-6">
                     <Input
                         label="Email Address"
                         type="email"
@@ -108,6 +135,7 @@ export default function LoginPage() {
                         error={errors.email}
                         placeholder="john@example.com"
                         required
+                        disabled={loading || success !== ''}
                     />
 
                     <Input
@@ -118,10 +146,17 @@ export default function LoginPage() {
                         error={errors.password}
                         placeholder="••••••••"
                         required
+                        disabled={loading || success !== ''}
                     />
 
-                    <Button type="submit" loading={loading} className="w-full">
-                        Sign In
+                    <Button
+                        type="button"
+                        onClick={handleSubmit}
+                        loading={loading}
+                        className="w-full"
+                        disabled={success !== ''}
+                    >
+                        {loading ? 'Signing In...' : 'Sign In'}
                     </Button>
 
                     <div className="text-center">
@@ -131,12 +166,13 @@ export default function LoginPage() {
                                 type="button"
                                 onClick={() => router.push('/register')}
                                 className="text-blue-600 hover:text-blue-700 font-medium"
+                                disabled={loading || success !== ''}
                             >
                                 Create one here
                             </button>
                         </p>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
     );

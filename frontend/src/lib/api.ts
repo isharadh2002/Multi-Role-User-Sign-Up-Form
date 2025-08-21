@@ -1,10 +1,10 @@
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8080';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
 
 interface ApiResponse<T> {
     success: boolean;
     message: string;
     data?: T;
-    errors?: Array<{ field: string; message: string }>;
+    errors?: Array<{ field: string; message: string; rejectedValue?: any }>;
 }
 
 export const api = {
@@ -19,7 +19,7 @@ export const api = {
             body: JSON.stringify(data),
         });
 
-        if (response.status === 401) {
+        if (response.status === 401 && !window.location.pathname.includes('/login')) {
             localStorage.clear();
             window.location.href = '/login';
             throw new Error('Authentication required');
