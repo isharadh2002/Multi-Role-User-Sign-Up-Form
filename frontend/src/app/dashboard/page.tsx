@@ -337,7 +337,7 @@ export default function DashboardPage() {
                                             onChange={(e) => setEditForm(prev => ({...prev, country: e.target.value}))}
                                             className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
                                                 errors.country ? 'border-red-300' : 'border-gray-300'
-                                            }`}
+                                            } text-gray-900`}
                                             required
                                         >
                                             <option value="">Select a country</option>
