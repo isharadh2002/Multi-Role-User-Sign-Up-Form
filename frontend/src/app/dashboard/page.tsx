@@ -4,7 +4,7 @@ import {useState, useEffect} from 'react';
 import {useRouter} from 'next/navigation';
 import {api} from '@/lib/api';
 import {auth} from '@/lib/auth';
-import {validateEmail, validateRequired, validatePhone} from '@/lib/validation';
+import {validateEmail, validateRequired, validatePhone, validatePassword} from '@/lib/validation';
 import {Button} from '@/components/ui/Button';
 import {Input} from '@/components/ui/Input';
 import {Alert} from '@/components/ui/Alert';
@@ -28,6 +28,12 @@ interface Role {
     user_count?: number;
 }
 
+interface PasswordChangeData {
+    currentPassword: string;
+    newPassword: string;
+    confirmNewPassword: string;
+}
+
 export default function DashboardPage() {
     const router = useRouter();
     const [user, setUser] = useState<User | null>(null);
@@ -35,6 +41,7 @@ export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [showPasswordChange, setShowPasswordChange] = useState(false);
+    const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
@@ -47,13 +54,14 @@ export default function DashboardPage() {
         roles: [] as string[]
     });
 
-    const [passwordForm, setPasswordForm] = useState({
+    const [passwordForm, setPasswordForm] = useState<PasswordChangeData>({
         currentPassword: '',
         newPassword: '',
         confirmNewPassword: ''
     });
 
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
 
     useEffect(() => {
         if (!auth.isLoggedIn()) {
@@ -125,6 +133,31 @@ export default function DashboardPage() {
         return Object.keys(newErrors).length === 0;
     };
 
+    const validatePasswordForm = () => {
+        const newErrors: Record<string, string> = {};
+
+        const currentPasswordError = validateRequired(passwordForm.currentPassword, 'Current password');
+        if (currentPasswordError) newErrors.currentPassword = currentPasswordError;
+
+        const newPasswordError = validatePassword(passwordForm.newPassword);
+        if (newPasswordError) newErrors.newPassword = newPasswordError;
+
+        const confirmPasswordError = validateRequired(passwordForm.confirmNewPassword, 'Confirm new password');
+        if (confirmPasswordError) {
+            newErrors.confirmNewPassword = confirmPasswordError;
+        } else if (passwordForm.newPassword !== passwordForm.confirmNewPassword) {
+            newErrors.confirmNewPassword = 'Passwords do not match';
+        }
+
+        // Check if new password is different from current password
+        if (passwordForm.currentPassword === passwordForm.newPassword) {
+            newErrors.newPassword = 'New password must be different from current password';
+        }
+
+        setPasswordErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
     const handleUpdateProfile = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
@@ -163,7 +196,45 @@ export default function DashboardPage() {
 
     const handlePasswordChange = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError('Password change feature is not implemented yet in the backend');
+        setError('');
+        setSuccess('');
+
+        if (!validatePasswordForm()) return;
+
+        setPasswordChangeLoading(true);
+        try {
+            const response = await api.put('/api/v1/profile/change-password', passwordForm);
+
+            if (response.success) {
+                setSuccess('Password changed successfully!');
+                // Don't close modal immediately, let user see success message
+                setTimeout(() => {
+                    setShowPasswordChange(false);
+                    setPasswordForm({
+                        currentPassword: '',
+                        newPassword: '',
+                        confirmNewPassword: ''
+                    });
+                    setPasswordErrors({});
+                }, 2000); // Show success message for 2 seconds
+            } else {
+                // Handle backend validation errors
+                if (response.errors && response.errors.length > 0) {
+                    const fieldErrors: Record<string, string> = {};
+                    response.errors.forEach(err => {
+                        fieldErrors[err.field] = err.message;
+                    });
+                    setPasswordErrors(fieldErrors);
+                } else {
+                    // Handle general backend error messages (like "Current password is incorrect")
+                    setError(response.message || 'Password change failed');
+                }
+            }
+        } catch (error) {
+            setError('Network error. Please try again.');
+        } finally {
+            setPasswordChangeLoading(false);
+        }
     };
 
     const handleRoleChange = (roleName: string) => {
@@ -178,6 +249,18 @@ export default function DashboardPage() {
     const getCountryName = (code: string) => {
         const country = COUNTRIES.find(c => c.code === code);
         return country ? country.name : code;
+    };
+
+    const closePasswordModal = () => {
+        setShowPasswordChange(false);
+        setPasswordForm({
+            currentPassword: '',
+            newPassword: '',
+            confirmNewPassword: ''
+        });
+        setPasswordErrors({});
+        setError('');
+        setSuccess(''); // Clear success message when closing
     };
 
     if (loading) {
@@ -201,9 +284,9 @@ export default function DashboardPage() {
                     <div className="flex justify-between items-center h-16">
                         <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
                         <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-700">
-                Welcome, {user?.first_name} {user?.last_name}
-              </span>
+                            <span className="text-sm text-gray-700">
+                                Welcome, {user?.first_name} {user?.last_name}
+                            </span>
                             {isAdmin && (
                                 <Button
                                     variant="danger"
@@ -248,8 +331,8 @@ export default function DashboardPage() {
                                             key={role}
                                             className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-medium"
                                         >
-                      {role}
-                    </span>
+                                            {role}
+                                        </span>
                                     ))}
                                 </div>
                             </div>
@@ -412,15 +495,27 @@ export default function DashboardPage() {
                         <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
                             <h2 className="text-xl font-bold text-gray-900 mb-6">Change Password</h2>
 
+                            {/* Display error and success messages inside modal */}
+                            {error && <Alert type="error" className="mb-4">{error}</Alert>}
+                            {success && <Alert type="success" className="mb-4">{success}</Alert>}
+
                             <form onSubmit={handlePasswordChange} className="space-y-4">
                                 <Input
                                     label="Current Password"
                                     type="password"
                                     value={passwordForm.currentPassword}
-                                    onChange={(e) => setPasswordForm(prev => ({
-                                        ...prev,
-                                        currentPassword: e.target.value
-                                    }))}
+                                    onChange={(e) => {
+                                        setPasswordForm(prev => ({
+                                            ...prev,
+                                            currentPassword: e.target.value
+                                        }));
+                                        // Clear error when user starts typing
+                                        if (passwordErrors.currentPassword) {
+                                            setPasswordErrors(prev => ({ ...prev, currentPassword: '' }));
+                                        }
+                                        if (error) setError('');
+                                    }}
+                                    error={passwordErrors.currentPassword}
                                     required
                                 />
 
@@ -428,7 +523,15 @@ export default function DashboardPage() {
                                     label="New Password"
                                     type="password"
                                     value={passwordForm.newPassword}
-                                    onChange={(e) => setPasswordForm(prev => ({...prev, newPassword: e.target.value}))}
+                                    onChange={(e) => {
+                                        setPasswordForm(prev => ({...prev, newPassword: e.target.value}));
+                                        // Clear errors when user starts typing
+                                        if (passwordErrors.newPassword) {
+                                            setPasswordErrors(prev => ({ ...prev, newPassword: '' }));
+                                        }
+                                        if (error) setError('');
+                                    }}
+                                    error={passwordErrors.newPassword}
                                     required
                                 />
 
@@ -436,29 +539,36 @@ export default function DashboardPage() {
                                     label="Confirm New Password"
                                     type="password"
                                     value={passwordForm.confirmNewPassword}
-                                    onChange={(e) => setPasswordForm(prev => ({
-                                        ...prev,
-                                        confirmNewPassword: e.target.value
-                                    }))}
+                                    onChange={(e) => {
+                                        setPasswordForm(prev => ({
+                                            ...prev,
+                                            confirmNewPassword: e.target.value
+                                        }));
+                                        // Clear errors when user starts typing
+                                        if (passwordErrors.confirmNewPassword) {
+                                            setPasswordErrors(prev => ({ ...prev, confirmNewPassword: '' }));
+                                        }
+                                        if (error) setError('');
+                                    }}
+                                    error={passwordErrors.confirmNewPassword}
                                     required
                                 />
 
                                 <div className="flex gap-4 pt-4">
-                                    <Button type="submit" className="flex-1">
+                                    <Button
+                                        type="submit"
+                                        className="flex-1"
+                                        loading={passwordChangeLoading}
+                                        disabled={success ? true : false} // Disable when success message is shown
+                                    >
                                         Change Password
                                     </Button>
                                     <Button
                                         type="button"
                                         variant="secondary"
-                                        onClick={() => {
-                                            setShowPasswordChange(false);
-                                            setPasswordForm({
-                                                currentPassword: '',
-                                                newPassword: '',
-                                                confirmNewPassword: ''
-                                            });
-                                        }}
+                                        onClick={closePasswordModal}
                                         className="flex-1"
+                                        disabled={passwordChangeLoading}
                                     >
                                         Cancel
                                     </Button>
