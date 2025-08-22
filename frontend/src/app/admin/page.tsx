@@ -18,10 +18,18 @@ export default function AdminPage() {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
+    // Role management states
     const [showCreateRole, setShowCreateRole] = useState(false);
+    const [showEditRole, setShowEditRole] = useState(false);
+    const [selectedRole, setSelectedRole] = useState<Role | null>(null);
     const [newRole, setNewRole] = useState({ name: '', description: '' });
+    const [editRole, setEditRole] = useState({ name: '', description: '' });
+
+    // Loading states
     const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
     const [deletingRoleId, setDeletingRoleId] = useState<number | null>(null);
+    const [creatingRole, setCreatingRole] = useState(false);
+    const [updatingRole, setUpdatingRole] = useState(false);
 
     useEffect(() => {
         if (!auth.isLoggedIn() || !auth.isAdmin()) {
@@ -55,6 +63,11 @@ export default function AdminPage() {
         }
     };
 
+    const clearMessages = () => {
+        setError('');
+        setSuccess('');
+    };
+
     const handleLogout = () => {
         auth.logout();
         router.push('/');
@@ -66,10 +79,9 @@ export default function AdminPage() {
         }
 
         setDeletingUserId(userId);
-        try {
-            setError('');
-            setSuccess('');
+        clearMessages();
 
+        try {
             const response = await api.delete(`/api/v1/admin/users/${userId}`);
 
             if (response.success) {
@@ -91,57 +103,94 @@ export default function AdminPage() {
 
     const handleCreateRole = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
-        setSuccess('');
+        clearMessages();
 
         if (!newRole.name.trim()) {
             setError('Role name is required');
             return;
         }
 
+        setCreatingRole(true);
         try {
-            const response = await api.post('/api/v1/admin/roles', {
-                name: newRole.name,
-                description: newRole.description
+            const response = await api.post<Role>('/api/v1/admin/roles', {
+                name: newRole.name.trim(),
+                description: newRole.description.trim()
             });
 
             if (response.success) {
                 setSuccess('Role created successfully');
                 setShowCreateRole(false);
                 setNewRole({ name: '', description: '' });
-
                 // Refresh roles list
-                const rolesResponse = await api.get<Role[]>('/api/v1/roles');
-                if (rolesResponse.success) {
-                    setRoles(rolesResponse.data || []);
-                }
+                await loadRoles();
             } else {
                 setError(response.message || 'Failed to create role');
             }
         } catch (error) {
             setError('Network error. Please try again.');
+        } finally {
+            setCreatingRole(false);
+        }
+    };
+
+    const handleEditRole = (role: Role) => {
+        setSelectedRole(role);
+        setEditRole({ name: role.name, description: role.description || '' });
+        setShowEditRole(true);
+        clearMessages();
+    };
+
+    const handleUpdateRole = async (e: React.FormEvent) => {
+        e.preventDefault();
+        clearMessages();
+
+        if (!selectedRole || !editRole.name.trim()) {
+            setError('Role name is required');
+            return;
+        }
+
+        setUpdatingRole(true);
+        try {
+            const response = await api.put<Role>(`/api/v1/admin/roles/${selectedRole.role_id}`, {
+                name: editRole.name.trim(),
+                description: editRole.description.trim()
+            });
+
+            if (response.success) {
+                setSuccess('Role updated successfully');
+                setShowEditRole(false);
+                setSelectedRole(null);
+                setEditRole({ name: '', description: '' });
+                // Refresh roles list
+                await loadRoles();
+            } else {
+                setError(response.message || 'Failed to update role');
+            }
+        } catch (error) {
+            setError('Network error. Please try again.');
+        } finally {
+            setUpdatingRole(false);
         }
     };
 
     const handleDeleteRole = async (roleId: number) => {
-        if (!confirm('Are you sure you want to delete this role? This action cannot be undone.')) {
+        const role = roles.find(r => r.role_id === roleId);
+        if (!role) return;
+
+        if (!confirm(`Are you sure you want to delete the role "${role.name}"? This action cannot be undone.`)) {
             return;
         }
 
         setDeletingRoleId(roleId);
-        try {
-            setError('');
-            setSuccess('');
+        clearMessages();
 
+        try {
             const response = await api.delete(`/api/v1/admin/roles/${roleId}`);
 
             if (response.success) {
                 setSuccess('Role deleted successfully');
                 // Refresh roles list
-                const rolesResponse = await api.get<Role[]>('/api/v1/roles');
-                if (rolesResponse.success) {
-                    setRoles(rolesResponse.data || []);
-                }
+                await loadRoles();
             } else {
                 setError(response.message || 'Failed to delete role');
             }
@@ -152,13 +201,37 @@ export default function AdminPage() {
         }
     };
 
+    const loadRoles = async () => {
+        try {
+            const rolesResponse = await api.get<Role[]>('/api/v1/roles');
+            if (rolesResponse.success) {
+                setRoles(rolesResponse.data || []);
+            }
+        } catch (error) {
+            console.error('Failed to load roles:', error);
+        }
+    };
+
+    const closeCreateModal = () => {
+        setShowCreateRole(false);
+        setNewRole({ name: '', description: '' });
+        clearMessages();
+    };
+
+    const closeEditModal = () => {
+        setShowEditRole(false);
+        setSelectedRole(null);
+        setEditRole({ name: '', description: '' });
+        clearMessages();
+    };
+
     const systemRoles = ['Admin', 'General User', 'Professional', 'Business Owner'];
 
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-red-600 mx-auto"></div>
+                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto"></div>
                     <p className="mt-4 text-gray-600">Loading admin panel...</p>
                 </div>
             </div>
@@ -204,7 +277,7 @@ export default function AdminPage() {
                                 onClick={() => setActiveTab('users')}
                                 className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
                                     activeTab === 'users'
-                                        ? 'border-red-500 text-red-600'
+                                        ? 'border-blue-500 text-blue-600'
                                         : 'border-transparent text-gray-500 hover:text-gray-700'
                                 }`}
                             >
@@ -214,7 +287,7 @@ export default function AdminPage() {
                                 onClick={() => setActiveTab('roles')}
                                 className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
                                     activeTab === 'roles'
-                                        ? 'border-red-500 text-red-600'
+                                        ? 'border-blue-500 text-blue-600'
                                         : 'border-transparent text-gray-500 hover:text-gray-700'
                                 }`}
                             >
@@ -278,8 +351,8 @@ export default function AdminPage() {
                                                         key={role}
                                                         className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
                                                     >
-                              {role}
-                            </span>
+                                                        {role}
+                                                    </span>
                                                 ))}
                                             </div>
                                         </td>
@@ -311,8 +384,8 @@ export default function AdminPage() {
                         <div className="flex justify-between items-center">
                             <h2 className="text-lg font-semibold text-gray-900">Role Management</h2>
                             <Button
-                                variant="danger"
                                 onClick={() => setShowCreateRole(true)}
+                                className="bg-blue-600 hover:bg-blue-700"
                             >
                                 Create New Role
                             </Button>
@@ -323,24 +396,35 @@ export default function AdminPage() {
                                 <div key={role.role_id} className="bg-white rounded-xl shadow-md p-6">
                                     <div className="flex justify-between items-start mb-4">
                                         <h3 className="text-lg font-semibold text-gray-900">{role.name}</h3>
-                                        {!systemRoles.includes(role.name) && (
-                                            <Button
-                                                variant="danger"
-                                                onClick={() => handleDeleteRole(role.role_id)}
-                                                loading={deletingRoleId === role.role_id}
-                                                className="text-xs px-3 py-1"
-                                            >
-                                                Delete
-                                            </Button>
-                                        )}
+                                        <div className="flex gap-2">
+                                            {!systemRoles.includes(role.name) && (
+                                                <>
+                                                    <Button
+                                                        variant="secondary"
+                                                        onClick={() => handleEditRole(role)}
+                                                        className="text-xs px-3 py-1"
+                                                    >
+                                                        Edit
+                                                    </Button>
+                                                    <Button
+                                                        variant="danger"
+                                                        onClick={() => handleDeleteRole(role.role_id)}
+                                                        loading={deletingRoleId === role.role_id}
+                                                        className="text-xs px-3 py-1"
+                                                    >
+                                                        Delete
+                                                    </Button>
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
-                                    <p className="text-gray-600 text-sm mb-4">{role.description}</p>
+                                    <p className="text-gray-600 text-sm mb-4">{role.description || 'No description'}</p>
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm text-gray-500">Users: {role.user_count || 0}</span>
                                         {systemRoles.includes(role.name) && (
                                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                        System Role
-                      </span>
+                                                System Role
+                                            </span>
                                         )}
                                     </div>
                                 </div>
@@ -370,23 +454,74 @@ export default function AdminPage() {
                                         value={newRole.description}
                                         onChange={(e) => setNewRole(prev => ({ ...prev, description: e.target.value }))}
                                         rows={3}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-colors"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900"
                                         placeholder="Enter role description (optional)"
                                     />
                                 </div>
 
                                 <div className="flex gap-4 pt-4">
-                                    <Button type="submit" variant="danger" className="flex-1">
+                                    <Button
+                                        type="submit"
+                                        className="flex-1 bg-blue-600 hover:bg-blue-700"
+                                        loading={creatingRole}
+                                    >
                                         Create Role
                                     </Button>
                                     <Button
                                         type="button"
                                         variant="secondary"
-                                        onClick={() => {
-                                            setShowCreateRole(false);
-                                            setNewRole({ name: '', description: '' });
-                                        }}
+                                        onClick={closeCreateModal}
                                         className="flex-1"
+                                        disabled={creatingRole}
+                                    >
+                                        Cancel
+                                    </Button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Edit Role Modal */}
+                {showEditRole && selectedRole && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+                            <h2 className="text-xl font-bold text-gray-900 mb-6">Edit Role</h2>
+
+                            <form onSubmit={handleUpdateRole} className="space-y-4">
+                                <Input
+                                    label="Role Name"
+                                    value={editRole.name}
+                                    onChange={(e) => setEditRole(prev => ({ ...prev, name: e.target.value }))}
+                                    placeholder="Enter role name"
+                                    required
+                                />
+
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-medium text-gray-700">Description</label>
+                                    <textarea
+                                        value={editRole.description}
+                                        onChange={(e) => setEditRole(prev => ({ ...prev, description: e.target.value }))}
+                                        rows={3}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900"
+                                        placeholder="Enter role description (optional)"
+                                    />
+                                </div>
+
+                                <div className="flex gap-4 pt-4">
+                                    <Button
+                                        type="submit"
+                                        className="flex-1 bg-blue-600 hover:bg-blue-700"
+                                        loading={updatingRole}
+                                    >
+                                        Update Role
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        onClick={closeEditModal}
+                                        className="flex-1"
+                                        disabled={updatingRole}
                                     >
                                         Cancel
                                     </Button>

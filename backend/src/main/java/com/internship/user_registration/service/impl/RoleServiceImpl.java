@@ -198,6 +198,6 @@ public class RoleServiceImpl implements RoleService {
         return Role.GENERAL_USER.equals(roleName) ||
                 Role.PROFESSIONAL.equals(roleName) ||
                 Role.BUSINESS_OWNER.equals(roleName) ||
-                "Admin".equals(roleName);
+                Role.ADMIN.equals(roleName);
     }
 }

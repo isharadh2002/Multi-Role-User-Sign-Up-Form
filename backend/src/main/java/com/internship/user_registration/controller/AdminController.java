@@ -1,8 +1,6 @@
 package com.internship.user_registration.controller;
 
-import com.internship.user_registration.dto.ApiResponseDto;
-import com.internship.user_registration.dto.RoleResponseDto;
-import com.internship.user_registration.dto.UserResponseDto;
+import com.internship.user_registration.dto.*;
 import com.internship.user_registration.service.RoleService;
 import com.internship.user_registration.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -11,13 +9,18 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * REST Controller for admin operations
@@ -112,21 +115,35 @@ public class AdminController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Role created successfully",
                     content = @Content(schema = @Schema(implementation = ApiResponseDto.class))),
-            @ApiResponse(responseCode = "400", description = "Role already exists",
+            @ApiResponse(responseCode = "400", description = "Validation failed or role already exists",
                     content = @Content(schema = @Schema(implementation = ApiResponseDto.class))),
             @ApiResponse(responseCode = "403", description = "Access denied",
                     content = @Content(schema = @Schema(implementation = ApiResponseDto.class)))
     })
     public ResponseEntity<ApiResponseDto<RoleResponseDto>> createRole(
-            @RequestParam String name,
-            @RequestParam(required = false) String description) {
+            @Valid @RequestBody RoleCreateDto roleCreateDto,
+            BindingResult bindingResult) {
 
-        log.info("Admin creating role: {}", name);
+        log.info("Admin creating role: {}", roleCreateDto.getName());
+
+        // Check for validation errors
+        if (bindingResult.hasErrors()) {
+            List<ValidationErrorDto> errors = bindingResult.getFieldErrors()
+                    .stream()
+                    .map(this::mapFieldError)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.badRequest()
+                    .body(ApiResponseDto.error("Validation failed", errors));
+        }
 
         try {
-            RoleResponseDto createdRole = roleService.createRole(name, description);
+            RoleResponseDto createdRole = roleService.createRole(
+                    roleCreateDto.getName(),
+                    roleCreateDto.getDescription()
+            );
 
-            return ResponseEntity.status(201)
+            return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponseDto.success("Role created successfully", createdRole));
 
         } catch (RuntimeException e) {
@@ -135,7 +152,7 @@ public class AdminController {
                     .body(ApiResponseDto.error(e.getMessage()));
         } catch (Exception e) {
             log.error("Unexpected error during role creation", e);
-            return ResponseEntity.status(500)
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponseDto.error("Role creation failed due to server error"));
         }
     }
@@ -145,6 +162,8 @@ public class AdminController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Role updated successfully",
                     content = @Content(schema = @Schema(implementation = ApiResponseDto.class))),
+            @ApiResponse(responseCode = "400", description = "Validation failed",
+                    content = @Content(schema = @Schema(implementation = ApiResponseDto.class))),
             @ApiResponse(responseCode = "404", description = "Role not found",
                     content = @Content(schema = @Schema(implementation = ApiResponseDto.class))),
             @ApiResponse(responseCode = "403", description = "Access denied",
@@ -152,13 +171,28 @@ public class AdminController {
     })
     public ResponseEntity<ApiResponseDto<RoleResponseDto>> updateRole(
             @PathVariable Long roleId,
-            @RequestParam(required = false) String name,
-            @RequestParam(required = false) String description) {
+            @Valid @RequestBody RoleUpdateDto roleUpdateDto,
+            BindingResult bindingResult) {
 
         log.info("Admin updating role with ID: {}", roleId);
 
+        // Check for validation errors
+        if (bindingResult.hasErrors()) {
+            List<ValidationErrorDto> errors = bindingResult.getFieldErrors()
+                    .stream()
+                    .map(this::mapFieldError)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.badRequest()
+                    .body(ApiResponseDto.error("Validation failed", errors));
+        }
+
         try {
-            RoleResponseDto updatedRole = roleService.updateRole(roleId, name, description);
+            RoleResponseDto updatedRole = roleService.updateRole(
+                    roleId,
+                    roleUpdateDto.getName(),
+                    roleUpdateDto.getDescription()
+            );
 
             return ResponseEntity.ok(
                     ApiResponseDto.success("Role updated successfully", updatedRole)
@@ -170,7 +204,7 @@ public class AdminController {
                     .body(ApiResponseDto.error(e.getMessage()));
         } catch (Exception e) {
             log.error("Unexpected error during role update", e);
-            return ResponseEntity.status(500)
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponseDto.error("Role update failed due to server error"));
         }
     }
@@ -204,5 +238,16 @@ public class AdminController {
             return ResponseEntity.status(500)
                     .body(ApiResponseDto.error("Role deletion failed due to server error"));
         }
+    }
+
+    /**
+     * Helper method to map Spring validation errors to our custom error DTO
+     */
+    private ValidationErrorDto mapFieldError(FieldError fieldError) {
+        return ValidationErrorDto.builder()
+                .field(fieldError.getField())
+                .message(fieldError.getDefaultMessage())
+                .rejectedValue(fieldError.getRejectedValue())
+                .build();
     }
 }
