@@ -37,7 +37,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (request.getServletPath().contains("/api/v1/auth/register") ||
                 request.getServletPath().contains("/api/v1/auth/check-email") ||
                 request.getServletPath().contains("/api/v1/auth/login") ||
-                request.getServletPath().contains("/api/v1/roles")) {
+                request.getServletPath().contains("/api/v1/roles") ||
+                request.getServletPath().startsWith("/swagger-ui") ||
+                request.getServletPath().startsWith("/v3/api-docs") ||
+                request.getServletPath().equals("/swagger-ui.html") ||
+                request.getServletPath().contains("/swagger-resources") ||
+                request.getServletPath().contains("/webjars/")
+        ) {
             filterChain.doFilter(request, response);
             return;
         }
