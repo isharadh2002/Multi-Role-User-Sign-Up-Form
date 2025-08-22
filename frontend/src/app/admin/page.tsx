@@ -7,7 +7,17 @@ import { auth } from '@/lib/auth';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Alert } from '@/components/ui/Alert';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 import { User, Role } from '@/types';
+
+interface ConfirmationState {
+    isOpen: boolean;
+    type: 'deleteUser' | 'deleteRole' | null;
+    title: string;
+    message: string;
+    targetId: number | null;
+    targetName?: string;
+}
 
 export default function AdminPage() {
     const router = useRouter();
@@ -30,6 +40,16 @@ export default function AdminPage() {
     const [deletingRoleId, setDeletingRoleId] = useState<number | null>(null);
     const [creatingRole, setCreatingRole] = useState(false);
     const [updatingRole, setUpdatingRole] = useState(false);
+
+    // Confirmation modal state
+    const [confirmation, setConfirmation] = useState<ConfirmationState>({
+        isOpen: false,
+        type: null,
+        title: '',
+        message: '',
+        targetId: null,
+        targetName: ''
+    });
 
     useEffect(() => {
         if (!auth.isLoggedIn() || !auth.isAdmin()) {
@@ -73,19 +93,29 @@ export default function AdminPage() {
         router.push('/');
     };
 
-    const handleDeleteUser = async (userId: number) => {
-        if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-            return;
-        }
-
-        setDeletingUserId(userId);
+    // User deletion with confirmation modal
+    const showUserDeleteConfirmation = (user: User) => {
+        setConfirmation({
+            isOpen: true,
+            type: 'deleteUser',
+            title: 'Delete User',
+            message: `Are you sure you want to delete "${user.first_name} ${user.last_name}"? This action cannot be undone and will permanently remove all user data.`,
+            targetId: user.user_id,
+            targetName: `${user.first_name} ${user.last_name}`
+        });
         clearMessages();
+    };
+
+    const handleDeleteUser = async () => {
+        if (!confirmation.targetId) return;
+
+        setDeletingUserId(confirmation.targetId);
 
         try {
-            const response = await api.delete(`/api/v1/admin/users/${userId}`);
+            const response = await api.delete(`/api/v1/admin/users/${confirmation.targetId}`);
 
             if (response.success) {
-                setSuccess('User deleted successfully');
+                setSuccess(`User "${confirmation.targetName}" deleted successfully`);
                 // Refresh users list
                 const usersResponse = await api.get<User[]>('/api/v1/admin/users');
                 if (usersResponse.success) {
@@ -98,6 +128,62 @@ export default function AdminPage() {
             setError('Network error. Please try again.');
         } finally {
             setDeletingUserId(null);
+            closeConfirmation();
+        }
+    };
+
+    // Role deletion with confirmation modal
+    const showRoleDeleteConfirmation = (role: Role) => {
+        setConfirmation({
+            isOpen: true,
+            type: 'deleteRole',
+            title: 'Delete Role',
+            message: `Are you sure you want to delete the role "${role.name}"? This action cannot be undone and may affect users who have this role assigned.`,
+            targetId: role.role_id,
+            targetName: role.name
+        });
+        clearMessages();
+    };
+
+    const handleDeleteRole = async () => {
+        if (!confirmation.targetId) return;
+
+        setDeletingRoleId(confirmation.targetId);
+
+        try {
+            const response = await api.delete(`/api/v1/admin/roles/${confirmation.targetId}`);
+
+            if (response.success) {
+                setSuccess(`Role "${confirmation.targetName}" deleted successfully`);
+                // Refresh roles list
+                await loadRoles();
+            } else {
+                setError(response.message || 'Failed to delete role');
+            }
+        } catch (error) {
+            setError('Network error. Please try again.');
+        } finally {
+            setDeletingRoleId(null);
+            closeConfirmation();
+        }
+    };
+
+    const closeConfirmation = () => {
+        setConfirmation({
+            isOpen: false,
+            type: null,
+            title: '',
+            message: '',
+            targetId: null,
+            targetName: ''
+        });
+    };
+
+    const handleConfirmAction = () => {
+        if (confirmation.type === 'deleteUser') {
+            handleDeleteUser();
+        } else if (confirmation.type === 'deleteRole') {
+            handleDeleteRole();
         }
     };
 
@@ -173,34 +259,6 @@ export default function AdminPage() {
         }
     };
 
-    const handleDeleteRole = async (roleId: number) => {
-        const role = roles.find(r => r.role_id === roleId);
-        if (!role) return;
-
-        if (!confirm(`Are you sure you want to delete the role "${role.name}"? This action cannot be undone.`)) {
-            return;
-        }
-
-        setDeletingRoleId(roleId);
-        clearMessages();
-
-        try {
-            const response = await api.delete(`/api/v1/admin/roles/${roleId}`);
-
-            if (response.success) {
-                setSuccess('Role deleted successfully');
-                // Refresh roles list
-                await loadRoles();
-            } else {
-                setError(response.message || 'Failed to delete role');
-            }
-        } catch (error) {
-            setError('Network error. Please try again.');
-        } finally {
-            setDeletingRoleId(null);
-        }
-    };
-
     const loadRoles = async () => {
         try {
             const rolesResponse = await api.get<Role[]>('/api/v1/roles');
@@ -226,6 +284,14 @@ export default function AdminPage() {
     };
 
     const systemRoles = ['Admin', 'General User', 'Professional', 'Business Owner'];
+
+    const isUserDeletionInProgress = (userId: number) => {
+        return deletingUserId === userId || (confirmation.isOpen && confirmation.targetId === userId && confirmation.type === 'deleteUser');
+    };
+
+    const isRoleDeletionInProgress = (roleId: number) => {
+        return deletingRoleId === roleId || (confirmation.isOpen && confirmation.targetId === roleId && confirmation.type === 'deleteRole');
+    };
 
     if (loading) {
         return (
@@ -362,9 +428,9 @@ export default function AdminPage() {
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <Button
                                                 variant="danger"
-                                                onClick={() => handleDeleteUser(user.user_id)}
-                                                disabled={user.roles.includes('Admin') || deletingUserId === user.user_id}
-                                                loading={deletingUserId === user.user_id}
+                                                onClick={() => showUserDeleteConfirmation(user)}
+                                                disabled={user.roles.includes('Admin') || isUserDeletionInProgress(user.user_id)}
+                                                loading={isUserDeletionInProgress(user.user_id)}
                                                 className="text-xs px-3 py-1"
                                             >
                                                 {user.roles.includes('Admin') ? 'Protected' : 'Delete'}
@@ -408,8 +474,9 @@ export default function AdminPage() {
                                                     </Button>
                                                     <Button
                                                         variant="danger"
-                                                        onClick={() => handleDeleteRole(role.role_id)}
-                                                        loading={deletingRoleId === role.role_id}
+                                                        onClick={() => showRoleDeleteConfirmation(role)}
+                                                        loading={isRoleDeletionInProgress(role.role_id)}
+                                                        disabled={isRoleDeletionInProgress(role.role_id)}
                                                         className="text-xs px-3 py-1"
                                                     >
                                                         Delete
@@ -432,6 +499,19 @@ export default function AdminPage() {
                         </div>
                     </div>
                 )}
+
+                {/* Confirmation Modal */}
+                <ConfirmationModal
+                    isOpen={confirmation.isOpen}
+                    onClose={closeConfirmation}
+                    onConfirm={handleConfirmAction}
+                    title={confirmation.title}
+                    message={confirmation.message}
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                    isLoading={confirmation.type === 'deleteUser' ? !!deletingUserId : !!deletingRoleId}
+                    variant="danger"
+                />
 
                 {/* Create Role Modal */}
                 {showCreateRole && (
