@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { validateEmail, validateRequired } from '@/lib/validation';
@@ -28,6 +28,10 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+
+    useEffect(() => {
+        document.title = 'UserHub - Login';
+    }, []);
 
     const [formData, setFormData] = useState<LoginData>({
         email: '',

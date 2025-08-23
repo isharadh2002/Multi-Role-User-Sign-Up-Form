@@ -17,6 +17,10 @@ export default function RegisterPage() {
     const [success, setSuccess] = useState('');
     const [roles, setRoles] = useState<Role[]>([]);
 
+    useEffect(() => {
+        document.title = 'UserHub - Registration';
+    }, []);
+
     const [formData, setFormData] = useState<RegistrationData>({
         firstName: '',
         lastName: '',

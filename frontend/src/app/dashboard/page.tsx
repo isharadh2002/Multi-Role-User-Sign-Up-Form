@@ -45,6 +45,10 @@ export default function DashboardPage() {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
+    useEffect(() => {
+        document.title = 'UserHub - Registration';
+    }, []);
+
     const [editForm, setEditForm] = useState({
         firstName: '',
         lastName: '',
