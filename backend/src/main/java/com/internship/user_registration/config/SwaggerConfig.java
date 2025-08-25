@@ -28,14 +28,7 @@ public class SwaggerConfig {
                         .description("A multi-role user registration system API built with Spring Boot. " +
                                 "Features include user registration, authentication, profile management, " +
                                 "and admin panel for user and role management.")
-                        .version("1.0.0")
-                        .contact(new Contact()
-                                .name("Internship Project Team")
-                                .email("intern@example.com")
-                                .url("https://github.com/username/user-registration"))
-                        .license(new License()
-                                .name("MIT License")
-                                .url("https://opensource.org/licenses/MIT")))
+                        .version("1.0.0"))
                 .servers(List.of(
                         new Server()
                                 .url("http://localhost:8080")
