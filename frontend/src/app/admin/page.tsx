@@ -27,6 +27,7 @@ export default function AdminPage() {
     const [activeTab, setActiveTab] = useState<'users' | 'roles'>('users');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     // Role management states
     const [showCreateRole, setShowCreateRole] = useState(false);
@@ -60,9 +61,8 @@ export default function AdminPage() {
             const timer = setTimeout(() => {
                 setError('');
                 setSuccess('');
-            }, 2000);
-
-            return () => clearTimeout(timer); // Cleanup if component re-renders before 5s
+            }, 3000);
+            return () => clearTimeout(timer);
         }
     }, [error, success]);
 
@@ -71,9 +71,12 @@ export default function AdminPage() {
             router.push('/dashboard');
             return;
         }
-
         loadData();
     }, [router]);
+
+    const toggleMobileMenu = () => {
+        setIsMobileMenuOpen(!isMobileMenuOpen);
+    };
 
     const loadData = async () => {
         setLoading(true);
@@ -131,7 +134,6 @@ export default function AdminPage() {
 
             if (response.success) {
                 setSuccess(`User "${confirmation.targetName}" deleted successfully`);
-                // Refresh users list
                 const usersResponse = await api.get<User[]>('/api/v1/admin/users');
                 if (usersResponse.success) {
                     setUsers(usersResponse.data || []);
@@ -170,7 +172,6 @@ export default function AdminPage() {
 
             if (response.success) {
                 setSuccess(`Role "${confirmation.targetName}" deleted successfully`);
-                // Refresh roles list
                 await loadRoles();
             } else {
                 setError(response.message || 'Failed to delete role');
@@ -222,7 +223,6 @@ export default function AdminPage() {
                 setSuccess('Role created successfully');
                 setShowCreateRole(false);
                 setNewRole({ name: '', description: '' });
-                // Refresh roles list
                 await loadRoles();
             } else {
                 setError(response.message || 'Failed to create role');
@@ -262,7 +262,6 @@ export default function AdminPage() {
                 setShowEditRole(false);
                 setSelectedRole(null);
                 setEditRole({ name: '', description: '' });
-                // Refresh roles list
                 await loadRoles();
             } else {
                 setError(response.message || 'Failed to update role');
@@ -326,7 +325,9 @@ export default function AdminPage() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-16">
                         <h1 className="text-xl font-semibold text-gray-900">Admin Panel</h1>
-                        <div className="flex items-center space-x-4">
+
+                        {/* Desktop Navigation */}
+                        <div className="hidden md:flex items-center space-x-4">
                             <Button
                                 variant="secondary"
                                 onClick={() => router.push('/dashboard')}
@@ -342,21 +343,73 @@ export default function AdminPage() {
                                 Logout
                             </Button>
                         </div>
+
+                        {/* Mobile menu button */}
+                        <div className="md:hidden">
+                            <button
+                                onClick={toggleMobileMenu}
+                                className="inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+                            >
+                                <span className="sr-only">Open menu</span>
+                                <svg
+                                    className={`${isMobileMenuOpen ? 'hidden' : 'block'} h-6 w-6`}
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                </svg>
+                                <svg
+                                    className={`${isMobileMenuOpen ? 'block' : 'hidden'} h-6 w-6`}
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Mobile Navigation Menu */}
+                    <div className={`md:hidden ${isMobileMenuOpen ? 'block' : 'hidden'}`}>
+                        <div className="px-2 pt-2 pb-3 space-y-1 border-t border-gray-200 bg-white">
+                            <button
+                                onClick={() => {
+                                    router.push('/dashboard');
+                                    setIsMobileMenuOpen(false);
+                                }}
+                                className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors"
+                            >
+                                Back to Dashboard
+                            </button>
+                            <button
+                                onClick={() => {
+                                    handleLogout();
+                                    setIsMobileMenuOpen(false);
+                                }}
+                                className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors"
+                            >
+                                Logout
+                            </button>
+                        </div>
                     </div>
                 </div>
             </header>
 
-            <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            <main className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
                 {error && <Alert type="error" className="mb-6">{error}</Alert>}
                 {success && <Alert type="success" className="mb-6">{success}</Alert>}
 
                 {/* Tabs */}
-                <div className="mb-8">
+                <div className="mb-6 sm:mb-8">
                     <div className="border-b border-gray-200">
-                        <nav className="-mb-px flex space-x-8">
+                        <nav className="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto">
                             <button
                                 onClick={() => setActiveTab('users')}
-                                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                                     activeTab === 'users'
                                         ? 'border-blue-500 text-blue-600'
                                         : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -366,7 +419,7 @@ export default function AdminPage() {
                             </button>
                             <button
                                 onClick={() => setActiveTab('roles')}
-                                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                                     activeTab === 'roles'
                                         ? 'border-blue-500 text-blue-600'
                                         : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -381,28 +434,72 @@ export default function AdminPage() {
                 {/* Users Tab */}
                 {activeTab === 'users' && (
                     <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-                        <div className="px-6 py-4 border-b border-gray-200">
+                        <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
                             <h2 className="text-lg font-semibold text-gray-900">All Users</h2>
                         </div>
-                        <div className="overflow-x-auto">
+
+                        {/* Mobile Card Layout */}
+                        <div className="block sm:hidden">
+                            <div className="divide-y divide-gray-200">
+                                {users.map((user) => (
+                                    <div key={user.user_id} className="p-4 space-y-3">
+                                        <div className="flex items-center">
+                                            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-medium text-sm">
+                                                {user.first_name[0]}{user.last_name[0]}
+                                            </div>
+                                            <div className="ml-3 flex-1">
+                                                <div className="text-sm font-medium text-gray-900">
+                                                    {user.first_name} {user.last_name}
+                                                </div>
+                                                <div className="text-xs text-gray-500">ID: {user.user_id}</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="text-sm text-gray-600 space-y-1">
+                                            <div className="break-all">{user.email}</div>
+                                            <div>{user.phone_number || 'No phone'}</div>
+                                        </div>
+
+                                        <div className="flex flex-wrap gap-1">
+                                            {user.roles.map(role => (
+                                                <span
+                                                    key={role}
+                                                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                                                >
+                                                    {role}
+                                                </span>
+                                            ))}
+                                        </div>
+
+                                        <div className="flex justify-between items-center pt-2">
+                                            <div className="text-xs text-gray-500">
+                                                Joined: {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}
+                                            </div>
+                                            <Button
+                                                variant="danger"
+                                                onClick={() => showUserDeleteConfirmation(user)}
+                                                disabled={user.roles.includes('Admin') || isUserDeletionInProgress(user.user_id)}
+                                                loading={isUserDeletionInProgress(user.user_id)}
+                                                className="text-xs px-3 py-1"
+                                            >
+                                                {user.roles.includes('Admin') ? 'Protected' : 'Delete'}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Desktop Table Layout */}
+                        <div className="hidden sm:block overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-200">
                                 <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                        User
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                        Contact
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                        Roles
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                        Joined
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                        Actions
-                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Roles</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Joined</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                                 </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
@@ -422,7 +519,7 @@ export default function AdminPage() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-900">{user.email}</div>
+                                            <div className="text-sm text-gray-900 max-w-xs truncate">{user.email}</div>
                                             <div className="text-sm text-gray-500">{user.phone_number || 'No phone'}</div>
                                         </td>
                                         <td className="px-6 py-4">
@@ -462,28 +559,30 @@ export default function AdminPage() {
                 {/* Roles Tab */}
                 {activeTab === 'roles' && (
                     <div className="space-y-6">
-                        <div className="flex justify-between items-center">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <h2 className="text-lg font-semibold text-gray-900">Role Management</h2>
                             <Button
                                 onClick={() => setShowCreateRole(true)}
-                                className="bg-blue-600 hover:bg-blue-700"
+                                className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
                             >
                                 Create New Role
                             </Button>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                             {roles.map(role => (
-                                <div key={role.role_id} className="bg-white rounded-xl shadow-md p-6">
+                                <div key={role.role_id} className="bg-white rounded-xl shadow-md p-4 sm:p-6">
                                     <div className="flex justify-between items-start mb-4">
-                                        <h3 className="text-lg font-semibold text-gray-900">{role.name}</h3>
-                                        <div className="flex gap-2">
+                                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 break-words flex-1 pr-2">
+                                            {role.name}
+                                        </h3>
+                                        <div className="flex gap-2 flex-shrink-0">
                                             {!systemRoles.includes(role.name) && (
                                                 <>
                                                     <Button
                                                         variant="secondary"
                                                         onClick={() => handleEditRole(role)}
-                                                        className="text-xs px-3 py-1"
+                                                        className="text-xs px-2 sm:px-3 py-1"
                                                     >
                                                         Edit
                                                     </Button>
@@ -492,7 +591,7 @@ export default function AdminPage() {
                                                         onClick={() => showRoleDeleteConfirmation(role)}
                                                         loading={isRoleDeletionInProgress(role.role_id)}
                                                         disabled={isRoleDeletionInProgress(role.role_id)}
-                                                        className="text-xs px-3 py-1"
+                                                        className="text-xs px-2 sm:px-3 py-1"
                                                     >
                                                         Delete
                                                     </Button>
@@ -500,7 +599,9 @@ export default function AdminPage() {
                                             )}
                                         </div>
                                     </div>
-                                    <p className="text-gray-600 text-sm mb-4">{role.description || 'No description'}</p>
+                                    <p className="text-gray-600 text-sm mb-4 break-words">
+                                        {role.description || 'No description'}
+                                    </p>
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm text-gray-500">Users: {role.user_count || 0}</span>
                                         {systemRoles.includes(role.name) && (
@@ -531,8 +632,8 @@ export default function AdminPage() {
                 {/* Create Role Modal */}
                 {showCreateRole && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-                            <h2 className="text-xl font-bold text-gray-900 mb-6">Create New Role</h2>
+                        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
+                            <h2 className="text-xl font-bold text-gray-900 mb-4 sm:mb-6">Create New Role</h2>
 
                             <form onSubmit={handleCreateRole} className="space-y-4">
                                 <Input
@@ -549,15 +650,15 @@ export default function AdminPage() {
                                         value={newRole.description}
                                         onChange={(e) => setNewRole(prev => ({ ...prev, description: e.target.value }))}
                                         rows={3}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 resize-none"
                                         placeholder="Enter role description (optional)"
                                     />
                                 </div>
 
-                                <div className="flex gap-4 pt-4">
+                                <div className="flex flex-col sm:flex-row gap-4 pt-4">
                                     <Button
                                         type="submit"
-                                        className="flex-1 bg-blue-600 hover:bg-blue-700"
+                                        className="w-full sm:flex-1 bg-blue-600 hover:bg-blue-700"
                                         loading={creatingRole}
                                     >
                                         Create Role
@@ -566,7 +667,7 @@ export default function AdminPage() {
                                         type="button"
                                         variant="secondary"
                                         onClick={closeCreateModal}
-                                        className="flex-1"
+                                        className="w-full sm:flex-1"
                                         disabled={creatingRole}
                                     >
                                         Cancel
@@ -580,8 +681,8 @@ export default function AdminPage() {
                 {/* Edit Role Modal */}
                 {showEditRole && selectedRole && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-                            <h2 className="text-xl font-bold text-gray-900 mb-6">Edit Role</h2>
+                        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
+                            <h2 className="text-xl font-bold text-gray-900 mb-4 sm:mb-6">Edit Role</h2>
 
                             <form onSubmit={handleUpdateRole} className="space-y-4">
                                 <Input
@@ -598,15 +699,15 @@ export default function AdminPage() {
                                         value={editRole.description}
                                         onChange={(e) => setEditRole(prev => ({ ...prev, description: e.target.value }))}
                                         rows={3}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 resize-none"
                                         placeholder="Enter role description (optional)"
                                     />
                                 </div>
 
-                                <div className="flex gap-4 pt-4">
+                                <div className="flex flex-col sm:flex-row gap-4 pt-4">
                                     <Button
                                         type="submit"
-                                        className="flex-1 bg-blue-600 hover:bg-blue-700"
+                                        className="w-full sm:flex-1 bg-blue-600 hover:bg-blue-700"
                                         loading={updatingRole}
                                     >
                                         Update Role
@@ -615,7 +716,7 @@ export default function AdminPage() {
                                         type="button"
                                         variant="secondary"
                                         onClick={closeEditModal}
-                                        className="flex-1"
+                                        className="w-full sm:flex-1"
                                         disabled={updatingRole}
                                     >
                                         Cancel

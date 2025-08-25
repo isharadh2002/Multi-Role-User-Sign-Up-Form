@@ -21,6 +21,17 @@ export default function RegisterPage() {
         document.title = 'UserHub - Registration';
     }, []);
 
+    useEffect(() => {
+        if (error || success) {
+            const timer = setTimeout(() => {
+                setError('');
+                setSuccess('');
+            }, 3000);
+
+            return () => clearTimeout(timer);
+        }
+    }, [error, success]);
+
     const [formData, setFormData] = useState<RegistrationData>({
         firstName: '',
         lastName: '',
@@ -137,17 +148,23 @@ export default function RegisterPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-            <div className="max-w-2xl w-full bg-white rounded-2xl shadow-xl p-8">
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
-                    <p className="text-gray-600">Join us today and get started</p>
+            <div className="max-w-2xl w-full bg-white rounded-2xl shadow-xl p-6 sm:p-8 max-h-[95vh] overflow-y-auto">
+                <div className="text-center mb-6 sm:mb-8">
+                    <button
+                        onClick={() => router.push('/')}
+                        className="text-blue-600 hover:text-blue-700 font-medium text-sm mb-4 inline-flex items-center"
+                    >
+                        ← Back to Home
+                    </button>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
+                    <p className="text-gray-600 text-sm sm:text-base">Join us today and get started</p>
                 </div>
 
                 {error && <Alert type="error" className="mb-6">{error}</Alert>}
                 {success && <Alert type="success" className="mb-6">{success}</Alert>}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                         <Input
                             label="First Name"
                             value={formData.firstName}
@@ -177,7 +194,7 @@ export default function RegisterPage() {
                         required
                     />
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                         <Input
                             label="Password"
                             type="password"
@@ -199,7 +216,7 @@ export default function RegisterPage() {
                         />
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                         <Input
                             label="Phone Number"
                             type="tel"
@@ -236,45 +253,47 @@ export default function RegisterPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-3">
                             Select Roles <span className="text-red-500">*</span> (Choose 1-3)
                         </label>
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                             {roles.map(role => (
                                 <label
                                     key={role.role_id}
-                                    className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
+                                    className="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
                                 >
                                     <input
                                         type="checkbox"
                                         checked={formData.roles.includes(role.name)}
                                         onChange={() => handleRoleChange(role.name)}
-                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded mt-0.5 flex-shrink-0"
                                     />
-                                    <div className="ml-3">
-                                        <span className="text-sm font-medium text-gray-900">{role.name}</span>
+                                    <div className="ml-3 flex-1">
+                                        <span className="text-sm font-medium text-gray-900 block">{role.name}</span>
                                         {role.description && (
-                                            <p className="text-xs text-gray-500 mt-1">{role.description}</p>
+                                            <p className="text-xs text-gray-500 mt-1 leading-relaxed">{role.description}</p>
                                         )}
                                     </div>
                                 </label>
                             ))}
                         </div>
-                        {errors.roles && <p className="text-sm text-red-600">{errors.roles}</p>}
+                        {errors.roles && <p className="text-sm text-red-600 mt-2">{errors.roles}</p>}
                     </div>
 
                     <Button
                         type="submit"
                         loading={loading}
-                        className="w-full"
+                        className="w-full py-3 sm:py-4 text-base sm:text-lg"
+                        disabled={success !== ''}
                     >
                         Create Account
                     </Button>
 
-                    <div className="text-center">
+                    <div className="text-center pt-4 border-t border-gray-200">
                         <p className="text-sm text-gray-600">
                             Already have an account?{' '}
                             <button
                                 type="button"
                                 onClick={() => router.push('/login')}
                                 className="text-blue-600 hover:text-blue-700 font-medium"
+                                disabled={loading || success !== ''}
                             >
                                 Sign in here
                             </button>

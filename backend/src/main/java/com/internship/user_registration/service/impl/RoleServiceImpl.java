@@ -161,10 +161,10 @@ public class RoleServiceImpl implements RoleService {
     public void initializeDefaultRoles() {
         log.info("Initializing default roles");
 
+        createRoleIfNotExists(Role.ADMIN, Role.ADMIN_DESCRIPTION);
         createRoleIfNotExists(Role.GENERAL_USER, Role.GENERAL_USER_DESCRIPTION);
         createRoleIfNotExists(Role.PROFESSIONAL, Role.PROFESSIONAL_DESCRIPTION);
         createRoleIfNotExists(Role.BUSINESS_OWNER, Role.BUSINESS_OWNER_DESCRIPTION);
-        createRoleIfNotExists(Role.ADMIN, Role.ADMIN_DESCRIPTION);
 
         log.info("Default roles initialization completed");
     }

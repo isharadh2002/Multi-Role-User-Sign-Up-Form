@@ -33,6 +33,17 @@ export default function LoginPage() {
         document.title = 'UserHub - Login';
     }, []);
 
+    useEffect(() => {
+        if (error || success) {
+            const timer = setTimeout(() => {
+                setError('');
+                setSuccess('');
+            }, 3000);
+
+            return () => clearTimeout(timer);
+        }
+    }, [error, success]);
+
     const [formData, setFormData] = useState<LoginData>({
         email: '',
         password: ''
@@ -55,7 +66,6 @@ export default function LoginPage() {
 
     const handleSubmit = async () => {
         try {
-            // Clear previous messages
             setError('');
             setSuccess('');
 
@@ -68,7 +78,6 @@ export default function LoginPage() {
             if (response.success && response.data) {
                 const loginData = response.data;
 
-                // Store user data in localStorage
                 localStorage.setItem('token', loginData.token);
                 localStorage.setItem('userId', loginData.user_id.toString());
                 localStorage.setItem('email', loginData.email);
@@ -76,20 +85,16 @@ export default function LoginPage() {
                 localStorage.setItem('lastName', loginData.last_name);
                 localStorage.setItem('roles', JSON.stringify(loginData.roles));
 
-                // Show success message
                 setSuccess('Login successful! Redirecting to dashboard...');
 
-                // Redirect after 2 seconds
                 setTimeout(() => {
                     router.push('/dashboard');
                 }, 2000);
 
             } else {
-                // Use the backend error message directly
                 setError(response.message || 'Login failed');
             }
         } catch (error: any) {
-            // Handle any errors that might cause page refresh
             console.error('Login error:', error);
             setError('Network error. Please try again.');
         } finally {
@@ -100,22 +105,32 @@ export default function LoginPage() {
     const handleInputChange = (name: keyof LoginData, value: string) => {
         setFormData(prev => ({ ...prev, [name]: value }));
 
-        // Clear field-specific error when user starts typing
         if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: '' }));
         }
 
-        // Clear general error and success messages when user modifies form
         if (error) setError('');
         if (success) setSuccess('');
     };
 
+    const handleKeyPress = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !loading && success === '') {
+            handleSubmit();
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-            <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-                    <p className="text-gray-600">Sign in to your account</p>
+            <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-6 sm:p-8">
+                <div className="text-center mb-6 sm:mb-8">
+                    <button
+                        onClick={() => router.push('/')}
+                        className="text-blue-600 hover:text-blue-700 font-medium text-sm mb-4 inline-flex items-center"
+                    >
+                        ← Back to Home
+                    </button>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
+                    <p className="text-gray-600 text-sm sm:text-base">Sign in to your account</p>
                 </div>
 
                 {error && (
@@ -136,10 +151,12 @@ export default function LoginPage() {
                         type="email"
                         value={formData.email}
                         onChange={(e) => handleInputChange('email', e.target.value)}
+                        onKeyPress={handleKeyPress}
                         error={errors.email}
                         placeholder="john@example.com"
                         required
                         disabled={loading || success !== ''}
+                        autoComplete="email"
                     />
 
                     <Input
@@ -147,23 +164,25 @@ export default function LoginPage() {
                         type="password"
                         value={formData.password}
                         onChange={(e) => handleInputChange('password', e.target.value)}
+                        onKeyPress={handleKeyPress}
                         error={errors.password}
                         placeholder="••••••••"
                         required
                         disabled={loading || success !== ''}
+                        autoComplete="current-password"
                     />
 
                     <Button
                         type="button"
                         onClick={handleSubmit}
                         loading={loading}
-                        className="w-full"
+                        className="w-full py-3 sm:py-4 text-base sm:text-lg"
                         disabled={success !== ''}
                     >
                         {loading ? 'Signing In...' : 'Sign In'}
                     </Button>
 
-                    <div className="text-center">
+                    <div className="text-center pt-4 border-t border-gray-200">
                         <p className="text-sm text-gray-600">
                             Don't have an account?{' '}
                             <button
