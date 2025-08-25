@@ -1,5 +1,6 @@
 package com.internship.user_registration.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
 import java.util.List;
@@ -8,11 +9,19 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Schema(description = "Standard API response wrapper")
 public class ApiResponseDto<T> {
 
+    @Schema(description = "Indicates if the operation was successful", example = "true")
     private boolean success;
+
+    @Schema(description = "Human-readable message describing the result", example = "User registered successfully")
     private String message;
+
+    @Schema(description = "Response data (varies by endpoint)")
     private T data;
+
+    @Schema(description = "Validation errors (only present when success=false)")
     private List<ValidationErrorDto> errors;
 
     // Success response factory methods

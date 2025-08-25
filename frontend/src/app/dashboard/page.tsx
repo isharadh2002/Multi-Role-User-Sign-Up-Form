@@ -46,8 +46,19 @@ export default function DashboardPage() {
     const [success, setSuccess] = useState('');
 
     useEffect(() => {
-        document.title = 'UserHub - Registration';
+        document.title = 'UserHub - Dashboard';
     }, []);
+
+    useEffect(() => {
+        if (error || success) {
+            const timer = setTimeout(() => {
+                setError('');
+                setSuccess('');
+            }, 2000);
+
+            return () => clearTimeout(timer); // Cleanup if component re-renders before 5s
+        }
+    }, [error, success]);
 
     const [editForm, setEditForm] = useState({
         firstName: '',

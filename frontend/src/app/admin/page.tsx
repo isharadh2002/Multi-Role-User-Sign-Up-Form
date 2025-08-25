@@ -52,6 +52,21 @@ export default function AdminPage() {
     });
 
     useEffect(() => {
+        document.title = 'UserHub - Admin Panel';
+    }, []);
+
+    useEffect(() => {
+        if (error || success) {
+            const timer = setTimeout(() => {
+                setError('');
+                setSuccess('');
+            }, 2000);
+
+            return () => clearTimeout(timer); // Cleanup if component re-renders before 5s
+        }
+    }, [error, success]);
+
+    useEffect(() => {
         if (!auth.isLoggedIn() || !auth.isAdmin()) {
             router.push('/dashboard');
             return;
